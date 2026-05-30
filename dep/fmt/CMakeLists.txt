@@ -8,6 +8,8 @@
 # WITHOUT ANY WARRANTY, to the extent permitted by law; without even the
 # implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
+include(CheckSymbolExists)
+
 set(strtod_l_headers stdlib.h)
 
 if (APPLE)
@@ -20,7 +22,7 @@ else()
   check_symbol_exists(strtod_l "${strtod_l_headers}" HAVE_STRTOD_L)
 endif()
 
-set(FMT_HEADERS 
+set(FMT_HEADERS
   include/fmt/chrono.h
   include/fmt/color.h
   include/fmt/compile.h
