@@ -392,7 +392,7 @@ public:
 
 BossAI ja tem:
 - `instance` ponteiro pro InstanceScript (membro do BossAI)
-- `_Reset()` / `_EnterCombat()` / `_JustDied()` (notificam instance)
+- `_Reset()` / `_JustEngagedWith(who)` / `_JustDied()` (notificam instance)
 - `_DespawnAtEvade()` (despawn minions no evade)
 - Gerenciamento de summons (adds seguem boss no evade)
 
