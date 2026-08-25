@@ -555,80 +555,104 @@ VALUES
 
 ### 5.2 SmartAI event types
 
-| event_type | Descricao | Parametros |
-|-----------|-----------|------------|
-| 0 | OnUpdate | param1=initialMin, param2=initialMax, param3=repeatMin, param4=repeatMax |
-| 1 | OnReceivedEmote | param1=emoteId |
-| 2 | OnFriendlyMissingBuff | param1=spellId, param2=radius |
-| 3 | OnFriendlyHP | param1=hp%, param2=radius |
-| 4 | OnAggro | - |
-| 5 | OnKill | param1=triggerFlags (0=any, 1=player, 2=creature) |
-| 6 | OnDeath | - |
-| 7 | OnEvade | - |
-| 8 | OnSpellHit | param1=spellId, param2=schoolMask |
-| 9 | OnTargetInRange | param1=dist |
-| 10 | OnCastCombatStart | - |
-| 11 | OnCastStart | param1=spellId |
-| 12 | OnCastEnd | param1=spellId |
-| 13 | OnTargetHP | param1=hp% |
-| 25 | OnReset | - |
-| 31 | OnReachedHome | - |
-| 35 | OnMovementInform | param1=type (POINT_MOTION_TYPE=8) |
+| event_type | Nome no core | Parametros |
+|-----------|--------------|------------|
+| 0 | SMART_EVENT_UPDATE_IC | initialMin, initialMax, repeatMin, repeatMax |
+| 1 | SMART_EVENT_UPDATE_OOC | initialMin, initialMax, repeatMin, repeatMax |
+| 2 | SMART_EVENT_HEALT_PCT | HPMin%, HPMax%, repeatMin, repeatMax |
+| 3 | SMART_EVENT_MANA_PCT | ManaMin%, ManaMax%, repeatMin, repeatMax |
+| 4 | SMART_EVENT_AGGRO | - |
+| 5 | SMART_EVENT_KILL | cooldownMin, cooldownMax, playerOnly, creatureEntry |
+| 6 | SMART_EVENT_DEATH | - |
+| 7 | SMART_EVENT_EVADE | - |
+| 8 | SMART_EVENT_SPELLHIT | spellId, schoolMask, cooldownMin, cooldownMax |
+| 9 | SMART_EVENT_RANGE | minDist, maxDist, repeatMin, repeatMax |
+| 10 | SMART_EVENT_OOC_LOS | noHostile, maxDist, cooldownMin, cooldownMax |
+| 11 | SMART_EVENT_RESPAWN | type, mapId, zoneId |
+| 12 | SMART_EVENT_TARGET_HEALTH_PCT | HPMin%, HPMax%, repeatMin, repeatMax |
+| 13 | SMART_EVENT_VICTIM_CASTING | repeatMin, repeatMax, spellId |
+| 16 | SMART_EVENT_FRIENDLY_MISSING_BUFF | spellId, radius, repeatMin, repeatMax |
+| 22 | SMART_EVENT_RECEIVE_EMOTE | emoteId, cooldownMin, cooldownMax |
+| 25 | SMART_EVENT_RESET | - |
+| 31 | SMART_EVENT_SPELLHIT_TARGET | spellId, schoolMask, cooldownMin, cooldownMax |
+| 34 | SMART_EVENT_MOVEMENTINFORM | movementType (POINT_MOTION_TYPE=8), pointId |
+| 61 | SMART_EVENT_LINK | uso interno - encadeia acoes |
+| 62 | SMART_EVENT_GOSSIP_SELECT | menuID, actionID |
+
+Fonte da verdade: `enum SMART_EVENT` em `src/server/game/AI/SmartScripts/SmartScriptMgr.h`. Consultar la para a lista completa.
 
 ### 5.3 SmartAI action types
 
-| action_type | Descricao | param1 |
-|------------|-----------|--------|
-| 11 | Cast spell | spellId |
-| 12 | Add aura | spellId |
-| 22 | Summon creature | creatureId |
-| 28 | Set HP | hp% (0=kill) |
-| 33 | Set equipment | slot1, slot2, slot3 |
-| 41 | Set react state | 0=passive, 1=defensive, 2=aggressive |
-| 45 | Set faction | factionId |
-| 46 | Set NPC flag | npcFlag |
-| 47 | Set GO flag | goFlag |
-| 49 | Start waypoint | wpId |
-| 51 | Set run/ walk | 0=walk, 1=run |
-| 52 | Set phase | phaseMask |
-| 53 | Set phase random | phaseMask |
-| 60 | Teleport | mapId, x, y, z |
-| 62 | Create timed event | id, min, max |
-| 63 | Remove timed event | id |
-| 64 | Set timer | id, time |
-| 66 | Say | textId |
-| 67 | Emote | emoteId |
-| 69 | Remove aura | spellId |
-| 70 | Follow | target |
-| 77 | Set home position | - |
-| 78 | Despawn | time |
-| 79 | Set immunity | schoolMask |
-| 80 | Set data | field, data |
-| 82 | Add to list | - |
-| 85 | Trigger spell on self | spellId |
-| 86 | Remove from list | - |
-| 87 | Set instance data | field, data |
-| 88 | Set boss state | bossId, state |
-| 89 | Activate gameobject | - |
-| 90 | Set faction A | factionA |
-| 91 | Set animation timer | time |
-| 92 | Go under water | - |
+| action_type | Nome no core | Parametros |
+|------------|--------------|------------|
+| 1 | SMART_ACTION_TALK | groupId creature_text, duration, useTalkTarget |
+| 2 | SMART_ACTION_SET_FACTION | factionId (0=default) |
+| 5 | SMART_ACTION_PLAY_EMOTE | emoteId |
+| 8 | SMART_ACTION_SET_REACT_STATE | 0=passive, 1=defensive, 2=aggressive |
+| 9 | SMART_ACTION_ACTIVATE_GOBJECT | - |
+| 11 | SMART_ACTION_CAST | spellId, castFlags, triggeredFlags |
+| 12 | SMART_ACTION_SUMMON_CREATURE | creatureId, summonType, duration(ms), attackInvoker |
+| 18/19 | SMART_ACTION_SET/REMOVE_UNIT_FLAG | flags, target |
+| 21 | SMART_ACTION_ALLOW_COMBAT_MOVEMENT | 0=stop, else continue |
+| 22 | SMART_ACTION_SET_EVENT_PHASE | phase |
+| 23 | SMART_ACTION_INC_EVENT_PHASE | value (+/-) |
+| 28 | SMART_ACTION_REMOVEAURASFROMSPELL | spellId (0=all), charges |
+| 29 | SMART_ACTION_FOLLOW | distance, angle, endCreatureEntry, credit |
+| 33 | SMART_ACTION_CALL_KILLEDMONSTER | creatureId |
+| 34 | SMART_ACTION_SET_INST_DATA | field, data, type (0=SetData, 1=SetBossState) |
+| 35 | SMART_ACTION_SET_INST_DATA64 | field |
+| 37 | SMART_ACTION_DIE | - |
+| 38 | SMART_ACTION_SET_IN_COMBAT_WITH_ZONE | - |
+| 41 | SMART_ACTION_FORCE_DESPAWN | timer |
+| 45 | SMART_ACTION_SET_DATA | field, data |
+| 53 | SMART_ACTION_WP_START | run/walk, pathID, canRepeat, quest, despawntime, reactState |
+| 54/55/56 | SMART_ACTION_WP_PAUSE/STOP/RESUME | time / despawnTime,quest / - |
+| 59 | SMART_ACTION_SET_RUN | 0=walk, 1=run |
+| 62 | SMART_ACTION_TELEPORT | mapId (xyz via target POSITION) |
+| 64 | SMART_ACTION_STORE_TARGET_LIST | varID |
+| 67/73/74 | CREATE/TRIGGER/REMOVE_TIMED_EVENT | id, minMax... / id / id |
+| 71 | SMART_ACTION_EQUIP | entry, slotmask, slot1-3 |
+| 75 | SMART_ACTION_ADD_AURA | spellId, targets |
+| 81/82/83 | SET/ADD/REMOVE_NPC_FLAG | flags |
+| 85 | SMART_ACTION_SELF_CAST | spellId, castFlags |
+| 98 | SMART_ACTION_SEND_GOSSIP_MENU | menuId, optionId |
+| 101 | SMART_ACTION_SET_HOME_POS | - |
+| 104/105/106 | SET/ADD/REMOVE_GO_FLAG | flags |
+| 107 | SMART_ACTION_SUMMON_CREATURE_GROUP | group, attackInvoker |
+| 118 | SMART_ACTION_GO_SET_GO_STATE | state |
+| 124 | SMART_ACTION_LOAD_EQUIPMENT | id |
+| 134 | SMART_ACTION_INVOKER_CAST | spellId, castFlags |
+| 136 | SMART_ACTION_SET_MOVEMENT_SPEED | movementType, speedInteger, speedFraction |
+
+Fonte da verdade: `enum SMART_ACTION` em `src/server/game/AI/SmartScripts/SmartScriptMgr.h`. Consultar la para a lista completa.
 
 ### 5.4 SmartAI target types
 
-| target_type | Descricao | param1 |
-|------------|-----------|--------|
-| 0 | Self | - |
-| 1 | Victim | - |
-| 2 | Hostile second aggro | - |
-| 3 | Hostile last aggro | - |
-| 4 | Owner | - |
-| 5 | Nearby creature | entry, radius |
-| 6 | Nearby friendly | entry, radius |
-| 7 | Summoner | - |
-| 8 | Nearby gameobject | entry, radius |
-| 9 | Player distance | distance |
-| 10 | Invoker (caster of event spell) | - |
+| target_type | Nome no core | Parametros |
+|-----------|--------------|------------|
+| 0 | SMART_TARGET_NONE | - |
+| 1 | SMART_TARGET_SELF | - |
+| 2 | SMART_TARGET_VICTIM | - |
+| 3 | SMART_TARGET_HOSTILE_SECOND_AGGRO | maxDist, playerOnly, powerType+1 |
+| 4 | SMART_TARGET_HOSTILE_LAST_AGGRO | idem 3 |
+| 5 | SMART_TARGET_HOSTILE_RANDOM | idem 3 |
+| 6 | SMART_TARGET_HOSTILE_RANDOM_NOT_TOP | idem 3 |
+| 7 | SMART_TARGET_ACTION_INVOKER | - |
+| 8 | SMART_TARGET_POSITION | x, y, z nos params |
+| 9 | SMART_TARGET_CREATURE_RANGE | entry(0=any), minDist, maxDist |
+| 10 | SMART_TARGET_CREATURE_GUID | guid, entry |
+| 11 | SMART_TARGET_CREATURE_DISTANCE | entry, maxDist |
+| 13 | SMART_TARGET_GAMEOBJECT_RANGE | entry, minDist, maxDist |
+| 17 | SMART_TARGET_PLAYER_RANGE | minDist, maxDist |
+| 18 | SMART_TARGET_PLAYER_DISTANCE | maxDist |
+| 19 | SMART_TARGET_CLOSEST_CREATURE | entry, maxDist, dead |
+| 20 | SMART_TARGET_CLOSEST_GAMEOBJECT | entry, maxDist |
+| 23 | SMART_TARGET_OWNER_OR_SUMMONER | - |
+| 24 | SMART_TARGET_THREAT_LIST | maxDist |
+| 27 | SMART_TARGET_LOOT_RECIPIENTS | - |
+| 28 | SMART_TARGET_FARTHEST | maxDist, playerOnly, isInLos |
+
+Fonte da verdade: `enum SMARTAI_TARGETS` em `src/server/game/AI/SmartScripts/SmartScriptMgr.h`.
 
 ---
 
