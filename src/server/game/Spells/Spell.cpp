@@ -4574,7 +4574,7 @@ void Spell::SendSpellStart()
     m_targets.Write(castData.Target);
 
     if (castFlags & CAST_FLAG_POWER_LEFT_SELF)
-        castData.RemainingPower = ASSERT_NOTNULL(m_caster->ToUnit())->GetPower(Powers(m_spellInfo->PowerType));
+        castData.RemainingPower = ASSERT_NOTNULL(m_caster->ToUnit())->GetPower(PowerType(m_spellInfo->PowerType));
 
     if (castFlags & CAST_FLAG_RUNE_LIST)                   // rune cooldowns list
     {
@@ -4694,7 +4694,7 @@ void Spell::SendSpellGo()
     }
 
     if (castFlags & CAST_FLAG_POWER_LEFT_SELF)
-        castData.RemainingPower = ASSERT_NOTNULL(m_caster->ToUnit())->GetPower((Powers)m_spellInfo->PowerType);
+        castData.RemainingPower = ASSERT_NOTNULL(m_caster->ToUnit())->GetPower((PowerType)m_spellInfo->PowerType);
 
     if (castFlags & CAST_FLAG_RUNE_LIST)                   // rune cooldowns list
     {
@@ -5230,27 +5230,31 @@ void Spell::TakeCastItem()
     bool expendable = false;
     bool withoutCharges = false;
 
-    for (uint8 i = 0; i < proto->Effects.size(); ++i)
+    for (uint32 i = 0; i < proto->Effects.size(); ++i)
     {
-        // item has limited charges
-        if (proto->Effects[i].Charges)
+        ItemEffect const& itemEffect = proto->Effects[i];
+        if (itemEffect.Trigger == ITEM_SPELLTRIGGER_ON_USE && itemEffect.SpellID > 0)
         {
-            if (proto->Effects[i].Charges < 0)
-                expendable = true;
-
-            int32 charges = m_CastItem->GetSpellCharges(i);
-
-            // item has charges left
-            if (charges)
+            // item has limited charges
+            if (itemEffect.Charges)
             {
-                (charges > 0) ? --charges : ++charges;  // abs(charges) less at 1 after use
-                if (proto->GetMaxStackSize() == 1)
-                    m_CastItem->SetSpellCharges(i, charges);
-                m_CastItem->SetState(ITEM_CHANGED, player);
-            }
+                if (itemEffect.Charges < 0)
+                    expendable = true;
 
-            // all charges used
-            withoutCharges = (charges == 0);
+                int32 charges = m_CastItem->GetSpellCharges(i);
+
+                // item has charges left for this slot
+                if (charges && itemEffect.SpellID == m_spellInfo->Id)
+                {
+                    (charges > 0) ? --charges : ++charges;  // abs(charges) less at 1 after use
+                    if (proto->GetMaxStackSize() == 1)
+                        m_CastItem->SetSpellCharges(i, charges);
+                    m_CastItem->SetState(ITEM_CHANGED, player);
+                }
+
+                // all charges used
+                withoutCharges = (charges == 0);
+            }
         }
     }
 
@@ -5286,7 +5290,7 @@ void Spell::TakePower()
             return;
     }
 
-    Powers powerType = Powers(m_spellInfo->PowerType);
+    PowerType powerType = PowerType(m_spellInfo->PowerType);
     if (unitCaster->GetTypeId() == TYPEID_PLAYER && m_spellInfo->HasAttribute(SPELL_ATTR1_DISCOUNT_POWER_ON_MISS))
     {
         ObjectGuid targetGUID = m_targets.GetUnitTargetGUID();
@@ -6146,7 +6150,7 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* param1 /*= nullptr*/, uint
                 // Can be area effect, Check only for players and not check if target - caster (spell can have multiply drain/burn effects)
                 if (m_caster->GetTypeId() == TYPEID_PLAYER)
                     if (Unit* target = m_targets.GetUnitTarget())
-                        if (target != m_caster && target->GetPowerType() != Powers(m_spellInfo->Effects[i].MiscValue))
+                        if (target != m_caster && target->GetPowerType() != PowerType(m_spellInfo->Effects[i].MiscValue))
                             return SPELL_FAILED_BAD_TARGETS;
                 break;
             }
@@ -7122,7 +7126,7 @@ SpellCastResult Spell::CheckPower() const
     }
 
     // Check power amount
-    Powers powerType = Powers(m_spellInfo->PowerType);
+    PowerType powerType = PowerType(m_spellInfo->PowerType);
     if (int32(unitCaster->GetPower(powerType)) < m_powerCost)
         return SPELL_FAILED_NO_POWER;
     else
@@ -7188,7 +7192,7 @@ SpellCastResult Spell::CheckItems(uint32* param1 /*= nullptr*/, uint32* param2 /
                         continue;
                     }
 
-                    Powers power = Powers(m_spellInfo->Effects[i].MiscValue);
+                    PowerType power = PowerType(m_spellInfo->Effects[i].MiscValue);
                     if (m_targets.GetUnitTarget()->GetPower(power) == m_targets.GetUnitTarget()->GetMaxPower(power))
                     {
                         failReason = SPELL_FAILED_ALREADY_AT_FULL_POWER;

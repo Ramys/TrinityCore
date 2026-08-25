@@ -102,6 +102,7 @@
 #include "SpellHistory.h"
 #include "SpellMgr.h"
 #include "SpellPackets.h"
+#include "Stats.h"
 #include "StringConvert.h"
 #include "TerrainMgr.h"
 #include "TicketMgr.h"
@@ -1231,10 +1232,7 @@ void Player::Update(uint32 p_time)
     if (m_petScalingSynchTimer.Passed())
     {
         if (pet)
-        {
             pet->UpdatePetScalingAuras();
-            pet->UpdateAllStats();
-        }
 
         m_petScalingSynchTimer.Reset(1000);
     }
@@ -2232,8 +2230,8 @@ void Player::GiveLevel(uint8 level)
     packet.PowerDelta[4] = 0;
     packet.PowerDelta[5] = 0;
 
-    for (uint8 i = STAT_STRENGTH; i < MAX_STATS; ++i)
-        packet.StatDelta[i] = int32(info.stats[i]) - GetCreateStat(Stats(i));
+    for (StatType stat : AllPrimaryStats)
+        packet.StatDelta[AsUnderlyingType(stat)] = int32(info.stats[AsUnderlyingType(stat)]) - GetStats().GetBaseStatValue(stat);
 
     SendDirectMessage(packet.Write());
 
@@ -2248,18 +2246,19 @@ void Player::GiveLevel(uint8 level)
 
     UpdateSkillsForLevel();
 
-    // save base values (bonuses already included in stored stats
-    for (uint8 i = STAT_STRENGTH; i < MAX_STATS; ++i)
-        SetCreateStat(Stats(i), info.stats[i]);
-
     SetCreateHealth(basehp);
     SetCreateMana(basemana);
+
+    // save base values (bonuses already included in stored stats)
+    for (StatType stat : AllPrimaryStats)
+        GetStats().SetBaseStatValue(stat, info.stats[AsUnderlyingType(stat)]);
 
     InitTalentForLevel();
     InitTaxiNodesForLevel();
     InitGlyphsForLevel();
 
-    UpdateAllStats();
+    UpdateAllRatings();
+    UpdateAllResistances();
 
     _ApplyAllLevelScaleItemMods(true); // Moved to above SetFullHealth so player will have full health from Heirlooms
 
@@ -2377,21 +2376,12 @@ void Player::InitStatsForLevel(bool reapplyMods)
     // reset size before reapply auras
     SetObjectScale(1.0f);
 
-    // save base values (bonuses already included in stored stats
-    for (uint8 i = STAT_STRENGTH; i < MAX_STATS; ++i)
-        SetCreateStat(Stats(i), info.stats[i]);
-
-    for (uint8 i = STAT_STRENGTH; i < MAX_STATS; ++i)
-        SetStat(Stats(i), info.stats[i]);
-
     SetCreateHealth(basehp);
-
-    //set create powers
     SetCreateMana(basemana);
 
-    SetArmor(int32(m_createStats[STAT_AGILITY]*2));
-
-    InitStatBuffMods();
+    // save base values (bonuses already included in stored stats
+    for (StatType stat : AllPrimaryStats)
+        GetStats().SetBaseStatValue(stat, info.stats[AsUnderlyingType(stat)]);
 
     //reset rating fields values
     for (uint16 index = PLAYER_FIELD_COMBAT_RATING_1; index < PLAYER_FIELD_COMBAT_RATING_1 + MAX_COMBAT_RATING; ++index)
@@ -2451,8 +2441,6 @@ void Player::InitStatsForLevel(bool reapplyMods)
     // Dodge percentage
     SetFloatValue(PLAYER_DODGE_PERCENTAGE, 0.0f);
 
-    // set armor (resistance 0) to original value (create_agility*2)
-    SetArmor(int32(m_createStats[STAT_AGILITY]*2));
     SetFloatValue(UNIT_FIELD_RESISTANCEBUFFMODSPOSITIVE + AsUnderlyingType(SPELL_SCHOOL_NORMAL), 0.0f);
     SetFloatValue(UNIT_FIELD_RESISTANCEBUFFMODSNEGATIVE + AsUnderlyingType(SPELL_SCHOOL_NORMAL), 0.0f);
     // set other resistance to original value (0)
@@ -2478,9 +2466,7 @@ void Player::InitStatsForLevel(bool reapplyMods)
 
     // save new stats
     for (uint8 i = POWER_MANA; i < MAX_POWERS; ++i)
-        SetMaxPower(Powers(i), GetCreatePowerValue(Powers(i)));
-
-    SetMaxHealth(basehp);                     // stamina bonus will applied later
+        SetMaxPower(PowerType(i), GetCreatePowerValue(PowerType(i)));
 
     // cleanup mounted state (it will set correctly at aura loading if player saved at mount.
     SetUInt32Value(UNIT_FIELD_MOUNTDISPLAYID, 0);
@@ -4875,8 +4861,8 @@ float Player::GetMeleeCritFromAgility() const
     if (critBase == nullptr || critRatio == nullptr)
         return 0.0f;
 
-    float crit = critBase->base + GetStat(STAT_AGILITY)*critRatio->ratio;
-    return crit*100.0f;
+    float crit = critBase->base + GetStat(StatType::Agility) * critRatio->ratio;
+    return crit * 100.0f;
 }
 
 void Player::GetDodgeFromAgility(float &diminishing, float &nondiminishing) const
@@ -4934,8 +4920,8 @@ void Player::GetDodgeFromAgility(float &diminishing, float &nondiminishing) cons
     if (!dodgeRatio || playerClass > MAX_CLASSES)
         return;
 
-    float baseAgility = GetCreateStat(STAT_AGILITY) * GetPctModifierValue(UnitMods(UNIT_MOD_STAT_START + AsUnderlyingType(STAT_AGILITY)), BASE_PCT);
-    float bonusAgility = GetStat(STAT_AGILITY) - baseAgility;
+    int32 baseAgility = GetStats().GetBaseStatValue(StatType::Agility);
+    int32 bonusAgility = GetStat(StatType::Agility) - baseAgility;
 
     // calculate diminishing (green in char screen) and non-diminishing (white) contribution
     diminishing = 100.0f * bonusAgility * dodgeRatio->ratio * critToDodge[playerClass -1 ];
@@ -4955,7 +4941,7 @@ float Player::GetSpellCritFromIntellect() const
     if (critBase == nullptr || critRatio == nullptr)
         return 0.0f;
 
-    float crit = critBase->base + GetStat(STAT_INTELLECT) * critRatio->ratio;
+    float crit = critBase->base + GetStat(StatType::Intellect) * critRatio->ratio;
     return crit * 100.0f;
 }
 
@@ -5043,7 +5029,7 @@ void Player::UpdateRating(CombatRating cr)
     AuraEffectList const& modRatingFromStat = GetAuraEffectsByType(SPELL_AURA_MOD_RATING_FROM_STAT);
     for (AuraEffectList::const_iterator i = modRatingFromStat.begin(); i != modRatingFromStat.end(); ++i)
         if ((*i)->GetMiscValue() & (1<<cr))
-            amount += int32(CalculatePct(GetStat(Stats((*i)->GetMiscValueB())), (*i)->GetAmount()));
+            amount += int32(CalculatePct(GetStat(StatType((*i)->GetMiscValueB())), (*i)->GetAmount()));
     if (amount < 0)
         amount = 0;
     SetUInt32Value(PLAYER_FIELD_COMBAT_RATING_1 + AsUnderlyingType(cr), uint32(amount));
@@ -7464,24 +7450,34 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
                 HandleStatFlatModifier(UNIT_MOD_HEALTH, BASE_VALUE, float(val), apply);
                 break;
             case ITEM_MOD_AGILITY:                          // modify agility
-                HandleStatFlatModifier(UNIT_MOD_STAT_AGILITY, BASE_VALUE, float(val), apply);
-                UpdateStatBuffMod(STAT_AGILITY);
+                if (apply)
+                    GetStats().AddBaseStatModifier(StatType::Agility, val);
+                else
+                    GetStats().RemoveBaseStatModifier(StatType::Agility, val);
                 break;
             case ITEM_MOD_STRENGTH:                         //modify strength
-                HandleStatFlatModifier(UNIT_MOD_STAT_STRENGTH, BASE_VALUE, float(val), apply);
-                UpdateStatBuffMod(STAT_STRENGTH);
+                if (apply)
+                    GetStats().AddBaseStatModifier(StatType::Strength, val);
+                else
+                    GetStats().RemoveBaseStatModifier(StatType::Strength, val);
                 break;
             case ITEM_MOD_INTELLECT:                        //modify intellect
-                HandleStatFlatModifier(UNIT_MOD_STAT_INTELLECT, BASE_VALUE, float(val), apply);
-                UpdateStatBuffMod(STAT_INTELLECT);
+                if (apply)
+                    GetStats().AddBaseStatModifier(StatType::Intellect, val);
+                else
+                    GetStats().RemoveBaseStatModifier(StatType::Intellect, val);
                 break;
             case ITEM_MOD_SPIRIT:                           //modify spirit
-                HandleStatFlatModifier(UNIT_MOD_STAT_SPIRIT, BASE_VALUE, float(val), apply);
-                UpdateStatBuffMod(STAT_SPIRIT);
+                if (apply)
+                    GetStats().AddBaseStatModifier(StatType::Spirit, val);
+                else
+                    GetStats().RemoveBaseStatModifier(StatType::Spirit, val);
                 break;
             case ITEM_MOD_STAMINA:                          //modify stamina
-                HandleStatFlatModifier(UNIT_MOD_STAT_STAMINA, BASE_VALUE, float(val), apply);
-                UpdateStatBuffMod(STAT_STAMINA);
+                if (apply)
+                    GetStats().AddBaseStatModifier(StatType::Stamina, val);
+                else
+                    GetStats().RemoveBaseStatModifier(StatType::Stamina, val);
                 break;
             case ITEM_MOD_DEFENSE_SKILL_RATING:
                 ApplyRatingMod(CR_DEFENSE_SKILL, int32(val), apply);
@@ -12646,24 +12642,34 @@ void Player::ApplyReforgeEnchantment(Item* item, bool apply)
             HandleStatFlatModifier(UNIT_MOD_HEALTH, BASE_VALUE, -removeValue, apply);
             break;
         case ITEM_MOD_AGILITY:
-            HandleStatFlatModifier(UNIT_MOD_STAT_AGILITY, TOTAL_VALUE, -removeValue, apply);
-            UpdateStatBuffMod(STAT_AGILITY);
+            if (apply)
+                GetStats().RemoveBaseStatModifier(StatType::Agility, removeValue);
+            else
+                GetStats().AddBaseStatModifier(StatType::Agility, removeValue);
             break;
         case ITEM_MOD_STRENGTH:
-            HandleStatFlatModifier(UNIT_MOD_STAT_STRENGTH, TOTAL_VALUE, -removeValue, apply);
-            UpdateStatBuffMod(STAT_STRENGTH);
+            if (apply)
+                GetStats().RemoveBaseStatModifier(StatType::Strength, removeValue);
+            else
+                GetStats().AddBaseStatModifier(StatType::Strength, removeValue);
             break;
         case ITEM_MOD_INTELLECT:
-            HandleStatFlatModifier(UNIT_MOD_STAT_INTELLECT, TOTAL_VALUE, -removeValue, apply);
-            UpdateStatBuffMod(STAT_INTELLECT);
+            if (apply)
+                GetStats().RemoveBaseStatModifier(StatType::Intellect, removeValue);
+            else
+                GetStats().AddBaseStatModifier(StatType::Intellect, removeValue);
             break;
         case ITEM_MOD_SPIRIT:
-            HandleStatFlatModifier(UNIT_MOD_STAT_SPIRIT, TOTAL_VALUE, -removeValue, apply);
-            UpdateStatBuffMod(STAT_SPIRIT);
+            if (apply)
+                GetStats().RemoveBaseStatModifier(StatType::Spirit, removeValue);
+            else
+                GetStats().AddBaseStatModifier(StatType::Spirit, removeValue);
             break;
         case ITEM_MOD_STAMINA:
-            HandleStatFlatModifier(UNIT_MOD_STAT_STAMINA, TOTAL_VALUE, -removeValue, apply);
-            UpdateStatBuffMod(STAT_STAMINA);
+            if (apply)
+                GetStats().RemoveBaseStatModifier(StatType::Stamina, removeValue);
+            else
+                GetStats().AddBaseStatModifier(StatType::Stamina, removeValue);
             break;
         case ITEM_MOD_DEFENSE_SKILL_RATING:
             ApplyRatingMod(CR_DEFENSE_SKILL, -int32(removeValue), apply);
@@ -12762,24 +12768,34 @@ void Player::ApplyReforgeEnchantment(Item* item, bool apply)
             HandleStatFlatModifier(UNIT_MOD_HEALTH, BASE_VALUE, addValue, apply);
             break;
         case ITEM_MOD_AGILITY:
-            HandleStatFlatModifier(UNIT_MOD_STAT_AGILITY, TOTAL_VALUE, addValue, apply);
-            UpdateStatBuffMod(STAT_AGILITY);
+            if (apply)
+                GetStats().AddBaseStatModifier(StatType::Agility, addValue);
+            else
+                GetStats().RemoveBaseStatModifier(StatType::Agility, addValue);
             break;
         case ITEM_MOD_STRENGTH:
-            HandleStatFlatModifier(UNIT_MOD_STAT_STRENGTH, TOTAL_VALUE, addValue, apply);
-            UpdateStatBuffMod(STAT_STRENGTH);
+            if (apply)
+                GetStats().AddBaseStatModifier(StatType::Strength, addValue);
+            else
+                GetStats().RemoveBaseStatModifier(StatType::Strength, addValue);
             break;
         case ITEM_MOD_INTELLECT:
-            HandleStatFlatModifier(UNIT_MOD_STAT_INTELLECT, TOTAL_VALUE, addValue, apply);
-            UpdateStatBuffMod(STAT_INTELLECT);
+            if (apply)
+                GetStats().AddBaseStatModifier(StatType::Intellect, addValue);
+            else
+                GetStats().RemoveBaseStatModifier(StatType::Intellect, addValue);
             break;
         case ITEM_MOD_SPIRIT:
-            HandleStatFlatModifier(UNIT_MOD_STAT_SPIRIT, TOTAL_VALUE, addValue, apply);
-            UpdateStatBuffMod(STAT_SPIRIT);
+            if (apply)
+                GetStats().AddBaseStatModifier(StatType::Spirit, addValue);
+            else
+                GetStats().RemoveBaseStatModifier(StatType::Spirit, addValue);
             break;
         case ITEM_MOD_STAMINA:
-            HandleStatFlatModifier(UNIT_MOD_STAT_STAMINA, TOTAL_VALUE, addValue, apply);
-            UpdateStatBuffMod(STAT_STAMINA);
+            if (apply)
+                GetStats().AddBaseStatModifier(StatType::Stamina, addValue);
+            else
+                GetStats().RemoveBaseStatModifier(StatType::Stamina, addValue);
             break;
         case ITEM_MOD_DEFENSE_SKILL_RATING:
             ApplyRatingMod(CR_DEFENSE_SKILL, int32(addValue), apply);
@@ -13042,28 +13058,38 @@ void Player::ApplyEnchantment(Item* item, EnchantmentSlot slot, bool apply, bool
                             break;
                         case ITEM_MOD_AGILITY:
                             TC_LOG_DEBUG("entities.player.items", "+ %u AGILITY", enchant_amount);
-                            HandleStatFlatModifier(UNIT_MOD_STAT_AGILITY, TOTAL_VALUE, float(enchant_amount), apply);
-                            UpdateStatBuffMod(STAT_AGILITY);
+                            if (apply)
+                                GetStats().AddBaseStatModifier(StatType::Agility, enchant_amount);
+                            else
+                                GetStats().RemoveBaseStatModifier(StatType::Agility, enchant_amount);
                             break;
                         case ITEM_MOD_STRENGTH:
                             TC_LOG_DEBUG("entities.player.items", "+ %u STRENGTH", enchant_amount);
-                            HandleStatFlatModifier(UNIT_MOD_STAT_STRENGTH, TOTAL_VALUE, float(enchant_amount), apply);
-                            UpdateStatBuffMod(STAT_STRENGTH);
+                            if (apply)
+                                GetStats().AddBaseStatModifier(StatType::Strength, enchant_amount);
+                            else
+                                GetStats().RemoveBaseStatModifier(StatType::Strength, enchant_amount);
                             break;
                         case ITEM_MOD_INTELLECT:
                             TC_LOG_DEBUG("entities.player.items", "+ %u INTELLECT", enchant_amount);
-                            HandleStatFlatModifier(UNIT_MOD_STAT_INTELLECT, TOTAL_VALUE, float(enchant_amount), apply);
-                            UpdateStatBuffMod(STAT_INTELLECT);
+                            if (apply)
+                                GetStats().AddBaseStatModifier(StatType::Intellect, enchant_amount);
+                            else
+                                GetStats().RemoveBaseStatModifier(StatType::Intellect, enchant_amount);
                             break;
                         case ITEM_MOD_SPIRIT:
                             TC_LOG_DEBUG("entities.player.items", "+ %u SPIRIT", enchant_amount);
-                            HandleStatFlatModifier(UNIT_MOD_STAT_SPIRIT, TOTAL_VALUE, float(enchant_amount), apply);
-                            UpdateStatBuffMod(STAT_SPIRIT);
+                            if (apply)
+                                GetStats().AddBaseStatModifier(StatType::Spirit, enchant_amount);
+                            else
+                                GetStats().RemoveBaseStatModifier(StatType::Spirit, enchant_amount);
                             break;
                         case ITEM_MOD_STAMINA:
                             TC_LOG_DEBUG("entities.player.items", "+ %u STAMINA", enchant_amount);
-                            HandleStatFlatModifier(UNIT_MOD_STAT_STAMINA, TOTAL_VALUE, float(enchant_amount), apply);
-                            UpdateStatBuffMod(STAT_STAMINA);
+                            if (apply)
+                                GetStats().AddBaseStatModifier(StatType::Stamina, enchant_amount);
+                            else
+                                GetStats().RemoveBaseStatModifier(StatType::Stamina, enchant_amount);
                             break;
                         case ITEM_MOD_DEFENSE_SKILL_RATING:
                             ApplyRatingMod(CR_DEFENSE_SKILL, enchant_amount, apply);
@@ -13359,7 +13385,7 @@ void Player::PrepareGossipMenu(WorldObject* source, uint32 menuId /*= 0*/, bool 
     GossipMenuItemsMapBounds menuItemBounds = sObjectMgr->GetGossipMenuItemsMapBounds(menuId);
 
     // if default menuId and no menu options exist for this, use options from default options
-    if (menuItemBounds.first == menuItemBounds.second && menuId == GetDefaultGossipMenuForSource(source))
+    if (menuItemBounds.first == menuItemBounds.second && menuId == GetGossipMenuForSource(source))
         menuItemBounds = sObjectMgr->GetGossipMenuItemsMapBounds(0);
 
     uint32 npcflags = 0;
@@ -13675,7 +13701,7 @@ uint32 Player::GetGossipTextId(WorldObject* source)
     if (!source)
         return DEFAULT_GOSSIP_MESSAGE;
 
-    return GetGossipTextId(GetDefaultGossipMenuForSource(source), source);
+    return GetGossipTextId(GetGossipMenuForSource(source), source);
 }
 
 uint32 Player::GetGossipTextId(uint32 menuId, WorldObject* source)
@@ -13689,6 +13715,10 @@ uint32 Player::GetGossipTextId(uint32 menuId, WorldObject* source)
 
     for (GossipMenusContainer::const_iterator itr = menuBounds.first; itr != menuBounds.second; ++itr)
     {
+        // continue if only checks menuid instead of text
+        if (!itr->second.TextID)
+            continue;
+
         if (sConditionMgr->IsObjectMeetToConditions(this, source, itr->second.Conditions))
             textId = itr->second.TextID;
     }
@@ -13696,12 +13726,33 @@ uint32 Player::GetGossipTextId(uint32 menuId, WorldObject* source)
     return textId;
 }
 
-uint32 Player::GetDefaultGossipMenuForSource(WorldObject* source)
+uint32 Player::GetGossipMenuForSource(WorldObject* source)
 {
     switch (source->GetTypeId())
     {
         case TYPEID_UNIT:
-            return source->ToCreature()->GetCreatureTemplate()->GossipMenuId;
+        {
+            uint32 menuIdToShow = source->ToCreature()->GetGossipMenuId();
+
+            // if menu id is set by script
+            if (menuIdToShow)
+                return menuIdToShow;
+
+            // otherwise pick from db based on conditions
+            for (uint32 menuId : source->ToCreature()->GetCreatureTemplate()->GossipMenuIds)
+            {
+                GossipMenusMapBounds menuBounds = sObjectMgr->GetGossipMenusMapBounds(menuId);
+
+                for (GossipMenusContainer::const_iterator itr = menuBounds.first; itr != menuBounds.second; ++itr)
+                {
+                    if (!sConditionMgr->IsObjectMeetToConditions(this, source, itr->second.Conditions))
+                        continue;
+
+                    menuIdToShow = menuId;
+                }
+            }
+            return menuIdToShow;
+        }
         case TYPEID_GAMEOBJECT:
             return source->ToGameObject()->GetGOInfo()->GetGossipMenuId();
         default:
@@ -17055,6 +17106,9 @@ bool Player::LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& hol
     SetGuidValue(PLAYER_DUEL_ARBITER, ObjectGuid::Empty);
     SetUInt32Value(PLAYER_DUEL_TEAM, 0);
 
+    RegisterPowerTypes();
+    UpdateDisplayPower();
+
     // reset stats before loading any modifiers
     InitStatsForLevel();
     InitGlyphsForLevel();
@@ -17086,8 +17140,6 @@ bool Player::LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& hol
     //mails are loaded only when needed ;-) - when player in game click on mailbox.
     //_LoadMail();
 
-    RegisterPowerTypes();
-    UpdateDisplayPower();
     _LoadTalents(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_TALENTS));
     _LoadSpells(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_SPELLS));
 
@@ -17157,18 +17209,19 @@ bool Player::LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& hol
 
     //apply all stat bonuses from items and auras
     SetCanModifyStats(true);
-    UpdateAllStats();
+    UpdateAllRatings();
+    UpdateAllResistances();
 
     // restore remembered power/health values (but not more max values)
     SetHealth(savedHealth);
     uint32 loadedPowers = 0;
     for (uint32 i = 0; i < MAX_POWERS; ++i)
     {
-        if (GetPowerIndex(Powers(i)) != MAX_POWERS)
+        if (GetPowerIndex(PowerType(i)) != MAX_POWERS)
         {
             uint32 savedPower = fields[53 + loadedPowers].GetUInt32();
             uint32 maxPower = GetUInt32Value(UNIT_FIELD_MAXPOWER1 + loadedPowers);
-            SetPower(Powers(i), (savedPower > maxPower) ? maxPower : savedPower);
+            SetPower(PowerType(i), (savedPower > maxPower) ? maxPower : savedPower);
             if (++loadedPowers >= MAX_POWERS_PER_CLASS)
                 break;
         }
@@ -19041,7 +19094,7 @@ void Player::SaveToDB(CharacterDatabaseTransaction trans, bool create /* = false
         uint32 storedPowers = 0;
         for (uint32 i = 0; i < MAX_POWERS; ++i)
         {
-            if (GetPowerIndex(Powers(i)) != MAX_POWERS)
+            if (GetPowerIndex(PowerType(i)) != MAX_POWERS)
             {
                 stmt->setUInt32(index++, GetUInt32Value(UNIT_FIELD_POWER1 + storedPowers));
                 if (++storedPowers >= MAX_POWERS_PER_CLASS)
@@ -19177,7 +19230,7 @@ void Player::SaveToDB(CharacterDatabaseTransaction trans, bool create /* = false
         uint32 storedPowers = 0;
         for (uint32 i = 0; i < MAX_POWERS; ++i)
         {
-            if (GetPowerIndex(Powers(i)) != MAX_POWERS)
+            if (GetPowerIndex(PowerType(i)) != MAX_POWERS)
             {
                 stmt->setUInt32(index++, GetUInt32Value(UNIT_FIELD_POWER1 + storedPowers));
                 if (++storedPowers >= MAX_POWERS_PER_CLASS)
@@ -20000,10 +20053,10 @@ void Player::_SaveStats(CharacterDatabaseTransaction& trans) const
     stmt->setUInt32(index++, GetMaxHealth());
 
     for (uint8 i = 0; i < MAX_POWERS_PER_CLASS; ++i)
-        stmt->setUInt32(index++, GetMaxPower(Powers(i)));
+        stmt->setUInt32(index++, GetMaxPower(PowerType(i)));
 
-    for (uint8 i = 0; i < MAX_STATS; ++i)
-        stmt->setUInt32(index++, GetStat(Stats(i)));
+    for (StatType stat : AllPrimaryStats)
+        stmt->setUInt32(index++, GetStat(stat));
 
     for (int i = 0; i < MAX_SPELL_SCHOOL; ++i)
         stmt->setUInt32(index++, GetResistance(SpellSchools(i)));
@@ -20028,9 +20081,9 @@ void Player::outDebugValues() const
         return;
 
     TC_LOG_DEBUG("entities.unit", "HP is: \t\t\t%u\t\tMP is: \t\t\t%u", GetMaxHealth(), GetMaxPower(POWER_MANA));
-    TC_LOG_DEBUG("entities.unit", "AGILITY is: \t\t%f\t\tSTRENGTH is: \t\t%f", GetStat(STAT_AGILITY), GetStat(STAT_STRENGTH));
-    TC_LOG_DEBUG("entities.unit", "INTELLECT is: \t\t%f\t\tSPIRIT is: \t\t%f", GetStat(STAT_INTELLECT), GetStat(STAT_SPIRIT));
-    TC_LOG_DEBUG("entities.unit", "STAMINA is: \t\t%f", GetStat(STAT_STAMINA));
+    TC_LOG_DEBUG("entities.unit", "AGILITY is: \t\t%i\t\tSTRENGTH is: \t\t%i", GetStat(StatType::Agility), GetStat(StatType::Strength));
+    TC_LOG_DEBUG("entities.unit", "INTELLECT is: \t\t%i\t\tSPIRIT is: \t\t%i", GetStat(StatType::Intellect), GetStat(StatType::Spirit));
+    TC_LOG_DEBUG("entities.unit", "STAMINA is: \t\t%i", GetStat(StatType::Stamina));
     TC_LOG_DEBUG("entities.unit", "Armor is: \t\t%u\t\tBlock is: \t\t%f", GetArmor(), GetFloatValue(PLAYER_BLOCK_PERCENTAGE));
     TC_LOG_DEBUG("entities.unit", "HolyRes is: \t\t%u\t\tFireRes is: \t\t%u", GetResistance(SPELL_SCHOOL_HOLY), GetResistance(SPELL_SCHOOL_FIRE));
     TC_LOG_DEBUG("entities.unit", "NatureRes is: \t\t%u\t\tFrostRes is: \t\t%u", GetResistance(SPELL_SCHOOL_NATURE), GetResistance(SPELL_SCHOOL_FROST));
@@ -26680,7 +26733,7 @@ void Player::ActivateSpec(uint8 spec)
         }));
     }
 
-    Powers pw = GetPowerType();
+    PowerType pw = GetPowerType();
     if (pw != POWER_MANA)
         SetPower(POWER_MANA, 0); // Mana must be 0 even if it isn't the active power type.
 
@@ -27446,7 +27499,6 @@ Pet* Player::SummonPet(uint32 entry, float x, float y, float z, float ang, PetTy
         }
 
         // Update all stats after we have applied pet scaling auras to make sure we have all fields initialized properly
-        pet->UpdateAllStats();
         pet->SetFullHealth();
         pet->SetPower(POWER_MANA, pet->GetMaxPower(POWER_MANA));
 

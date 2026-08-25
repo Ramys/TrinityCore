@@ -1296,7 +1296,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
 
         uint32 GetGossipTextId(uint32 menuId, WorldObject* source);
         uint32 GetGossipTextId(WorldObject* source);
-        static uint32 GetDefaultGossipMenuForSource(WorldObject* source);
+        uint32 GetGossipMenuForSource(WorldObject* source);
 
         /*********************************************************/
         /***                    QUEST SYSTEM                   ***/
@@ -1742,14 +1742,12 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         float GetHealthBonusFromStamina();
         float GetManaBonusFromIntellect();
 
-        bool UpdateStats(Stats stat) override;
-        bool UpdateAllStats() override;
         void ApplySpellPenetrationBonus(int32 amount, bool apply);
         void UpdateResistances(uint32 school) override;
         void UpdateArmor() override;
         void UpdateMaxHealth() override;
-        void UpdateMaxPower(Powers power) override;
-        uint32 GetPowerIndex(Powers power) const override;
+        void UpdateMaxPower(PowerType power) override;
+        uint32 GetPowerIndex(PowerType power) const override;
         void UpdateAttackPowerAndDamage(bool ranged = false) override;
         void ApplySpellPowerBonus(int32 amount, bool apply);
         void UpdateSpellDamageAndHealingBonus();

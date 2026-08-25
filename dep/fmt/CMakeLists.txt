@@ -12,6 +12,8 @@ include(CheckSymbolExists)
 
 set(strtod_l_headers stdlib.h)
 
+include(CheckSymbolExists)
+
 if (APPLE)
   set(strtod_l_headers ${strtod_l_headers} xlocale.h)
 endif ()

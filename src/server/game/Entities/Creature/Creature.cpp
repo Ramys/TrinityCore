@@ -280,7 +280,7 @@ m_respawnDelay(300), m_corpseDelay(60), m_wanderDistance(0.0f), m_boundaryCheckT
 m_defaultMovementType(IDLE_MOTION_TYPE), m_spawnId(0), m_equipmentId(0), m_originalEquipmentId(0), m_AlreadyCallAssistance(false),
 m_AlreadySearchedAssistance(false), m_regenHealth(true), m_cannotReachTarget(false), m_cannotReachTimer(0), m_meleeDamageSchoolMask(SPELL_SCHOOL_MASK_NORMAL),
 m_originalEntry(0), m_homePosition(), m_transportHomePosition(), m_creatureInfo(nullptr), m_creatureData(nullptr), _waypointPathId(0), _currentWaypointNodeInfo(0, 0), _cyclicSplinePathId(0),
-m_formation(nullptr), m_triggerJustAppeared(true), m_respawnCompatibilityMode(false), _lastDamagedTime(0), _isMissingSwimmingFlagOutOfCombat(false), _noNpcDamageBelowPctHealth(0.f)
+m_formation(nullptr), m_triggerJustAppeared(true), m_respawnCompatibilityMode(false), _lastDamagedTime(0), _isMissingSwimmingFlagOutOfCombat(false), _noNpcDamageBelowPctHealth(0.f), _gossipMenuId(0)
 {
     m_valuesCount = UNIT_END;
 
@@ -631,7 +631,15 @@ bool Creature::UpdateEntry(uint32 entry, CreatureData const* data /*= nullptr*/,
         SetStatFlatModifier(UNIT_MOD_RESISTANCE_ARCANE, BASE_VALUE, float(cInfo->resistance[SPELL_SCHOOL_ARCANE]));
 
         SetCanModifyStats(true);
-        UpdateAllStats();
+
+        UpdateMaxHealth();
+        UpdateAttackPowerAndDamage();
+        UpdateAttackPowerAndDamage(true);
+
+        for (uint8 i = POWER_MANA; i < MAX_POWERS; ++i)
+            UpdateMaxPower(PowerType(i));
+
+        UpdateAllResistances();
     }
 
     // checked and error show at loading templates
@@ -1233,6 +1241,16 @@ Group* Creature::GetLootRecipientGroup() const
     return sGroupMgr->GetGroupByGUID(m_lootRecipientGroup);
 }
 
+uint32 Creature::GetGossipMenuId() const
+{
+    return _gossipMenuId;
+}
+
+void Creature::SetGossipMenuId(uint32 gossipMenuID)
+{
+    _gossipMenuId = gossipMenuID;
+}
+
 void Creature::SetLootRecipient(Unit* unit, bool withGroup)
 {
     // set the player whose group should receive the right
@@ -1432,7 +1450,7 @@ void Creature::UpdateLevelDependantStats()
     SetStatFlatModifier(UNIT_MOD_HEALTH, BASE_VALUE, (float)health);
 
     // mana
-    Powers powerType = CalculateDisplayPowerType();
+    PowerType powerType = CalculateDisplayPowerType();
     SetCreateMana(stats->BaseMana);
     SetStatPctModifier(UnitMods(UNIT_MOD_POWER_START + AsUnderlyingType(powerType)), BASE_PCT, cInfo->ModMana * cInfo->ModManaExtra);
     RegisterPowerTypes();

@@ -194,13 +194,11 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
 
         bool UpdateEntry(uint32 entry, CreatureData const* data = nullptr, bool updateLevel = true);
 
-        bool UpdateStats(Stats stat) override;
-        bool UpdateAllStats() override;
         void UpdateResistances(uint32 school) override;
         void UpdateArmor() override;
         void UpdateMaxHealth() override;
-        void UpdateMaxPower(Powers power) override;
-        uint32 GetPowerIndex(Powers power) const override;
+        void UpdateMaxPower(PowerType power) override;
+        uint32 GetPowerIndex(PowerType power) const override;
         void UpdateAttackPowerAndDamage(bool ranged = false) override;
         void CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, bool addTotalPct, float& minDamage, float& maxDamage) const override;
 
@@ -413,6 +411,9 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         bool HasStaticFlag(CreatureStaticFlags4 flag) const { return _staticFlags.HasFlag(flag); }
         bool HasStaticFlag(CreatureStaticFlags5 flag) const { return _staticFlags.HasFlag(flag); }
 
+        uint32 GetGossipMenuId() const;
+        void SetGossipMenuId(uint32 gossipMenuId);
+
         CreatureMovementInfo const& GetCreatureMovementInfo() const { return _creatureMovementInfo; }
 
         // Sets the the max health percentage threshold at which uncontrolled/unowned creatures can no longer deal damage to the creature
@@ -510,6 +511,8 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
 
         Optional<uint32> _defaultMountDisplayIdOverride;
         float _noNpcDamageBelowPctHealth;
+
+        uint32 _gossipMenuId;
 };
 
 class TC_GAME_API AssistDelayEvent : public BasicEvent

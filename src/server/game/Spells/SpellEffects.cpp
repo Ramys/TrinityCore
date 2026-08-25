@@ -1055,7 +1055,7 @@ void Spell::EffectPowerDrain(SpellEffIndex effIndex)
     if (m_spellInfo->Effects[effIndex].MiscValue < 0 || m_spellInfo->Effects[effIndex].MiscValue >= int8(MAX_POWERS))
         return;
 
-    Powers powerType = Powers(m_spellInfo->Effects[effIndex].MiscValue);
+    PowerType powerType = PowerType(m_spellInfo->Effects[effIndex].MiscValue);
 
     if (!unitTarget || !unitTarget->IsAlive() || unitTarget->GetPowerType() != powerType || damage < 0)
         return;
@@ -1127,7 +1127,7 @@ void Spell::EffectPowerBurn(SpellEffIndex effIndex)
     if (m_spellInfo->Effects[effIndex].MiscValue < 0 || m_spellInfo->Effects[effIndex].MiscValue >= int8(MAX_POWERS))
         return;
 
-    Powers powerType = Powers(m_spellInfo->Effects[effIndex].MiscValue);
+    PowerType powerType = PowerType(m_spellInfo->Effects[effIndex].MiscValue);
 
     if (!unitTarget || !unitTarget->IsAlive() || unitTarget->GetPowerType() != powerType || damage < 0)
         return;
@@ -1519,6 +1519,10 @@ void Spell::EffectPersistentAA(SpellEffIndex effIndex)
     if (!unitCaster)
         return;
 
+    // Caster not in world, might be spell triggered from aura removal
+    if (!unitCaster->IsInWorld())
+        return;
+
     // only handle at last effect
     for (uint8 i = effIndex + 1; i < MAX_SPELL_EFFECTS; ++i)
         if (m_spellInfo->Effects[i].Effect == SPELL_EFFECT_PERSISTENT_AREA_AURA)
@@ -1526,10 +1530,12 @@ void Spell::EffectPersistentAA(SpellEffIndex effIndex)
 
     ASSERT(!_dynObjAura);
 
-    float radius = m_spellInfo->Effects[effIndex].CalcRadius(unitCaster);
-    // Caster not in world, might be spell triggered from aura removal
-    if (!unitCaster->IsInWorld())
-        return;
+    float radius = 0.0f;
+    for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+    {
+        if (m_spellInfo->Effects[i].Effect == SPELL_EFFECT_PERSISTENT_AREA_AURA)
+            radius = std::max(radius, m_spellInfo->Effects[i].CalcRadius(unitCaster));
+    }
 
     DynamicObject* dynObj = new DynamicObject(false);
     if (!dynObj->CreateDynamicObject(unitCaster->GetMap()->GenerateLowGuid<HighGuid::DynamicObject>(), unitCaster, m_spellInfo, *destTarget, radius, DYNAMIC_OBJECT_AREA_SPELL))
@@ -1570,7 +1576,7 @@ void Spell::EffectEnergize(SpellEffIndex effIndex)
     if (m_spellInfo->Effects[effIndex].MiscValue < 0 || m_spellInfo->Effects[effIndex].MiscValue >= int8(MAX_POWERS))
         return;
 
-    Powers power = Powers(m_spellInfo->Effects[effIndex].MiscValue);
+    PowerType power = PowerType(m_spellInfo->Effects[effIndex].MiscValue);
     if (unitTarget->GetMaxPower(power) == 0)
         return;
 
@@ -1631,7 +1637,7 @@ void Spell::EffectEnergizePct(SpellEffIndex effIndex)
     if (m_spellInfo->Effects[effIndex].MiscValue < 0 || m_spellInfo->Effects[effIndex].MiscValue >= int8(MAX_POWERS))
         return;
 
-    Powers power = Powers(m_spellInfo->Effects[effIndex].MiscValue);
+    PowerType power = PowerType(m_spellInfo->Effects[effIndex].MiscValue);
     uint32 maxPower = unitTarget->GetMaxPower(power);
     if (!maxPower)
         return;
