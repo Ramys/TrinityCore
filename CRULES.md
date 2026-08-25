@@ -161,7 +161,7 @@ void AddSC_example()
 
 No fim do arquivo. Nome da funcao = `AddSC_` + nome do arquivo.
 
-Registrar em `ScriptMgr.cpp` ou no `ScriptLoader.cpp` da zona.
+Registrar no `<zona>_script_loader.cpp` da zona (ex.: `eastern_kingdoms_script_loader.cpp`), dentro de `AddSC_<zona>()`.
 
 ---
 
@@ -1355,7 +1355,7 @@ void OnDamage(Unit* attacker, uint32 damage)
 | Item | Padrao | Exemplo |
 |------|--------|---------|
 | Classes | PascalCase | `BossAI`, `SpellScript` |
-| Metodos | PascalCase | `EnterCombat()`, `JustDied()` |
+| Metodos | PascalCase | `JustEngagedWith()`, `JustDied()` |
 | Variaveis | _camelCase | `_events`, `_phase`, `_bossGUID` |
 | Enums | UPPER_CASE | `DATA_BOSS_EXAMPLE`, `EVENT_FIREBALL` |
 | Constantes | UPPER_CASE | `SPELL_EXAMPLE`, `NPC_EXAMPLE` |
@@ -1442,7 +1442,7 @@ ObjectGuid guid = ObjectGuid::Create<HighGuid::Creature>(entry, spawnId);
 //     .../boss_example.cpp
 // )
 
-// Adicionar no ScriptLoader.cpp:
+// Adicionar no <zona>_script_loader.cpp (AddSC da zona):
 // extern void AddSC_boss_example();
 // [no map do loader]
 // AddSC_boss_example();
@@ -1540,21 +1540,27 @@ void MovementInform(uint32 type, uint32 id) override
 }
 ```
 
-Movement types:
+Movement types (`MotionMaster.h`):
 ```
-IDLE_MOTION_TYPE       = 0
-RANDOM_MOTION_TYPE     = 1
-WAYPOINT_MOTION_TYPE   = 2
-CONFUSED_MOTION_TYPE   = 3
-CHASE_MOTION_TYPE      = 4
-HOME_MOTION_TYPE       = 5
-FLIGHT_MOTION_TYPE     = 6
-POINT_MOTION_TYPE      = 7
-FOLLOW_MOTION_TYPE     = 8
-EFFECT_MOTION_TYPE     = 9
-ROTATE_MOTION_TYPE     = 10
-JUMP_MOTION_TYPE       = 11
-CHARGE_MOTION_TYPE     = 12
+IDLE_MOTION_TYPE                = 0
+RANDOM_MOTION_TYPE              = 1
+WAYPOINT_MOTION_TYPE            = 2
+CYCLIC_SPLINE_MOTION_TYPE       = 3   // MAX_DB_MOTION_TYPE = 4 (limite p/ DB)
+CONFUSED_MOTION_TYPE            = 4
+CHASE_MOTION_TYPE               = 5
+HOME_MOTION_TYPE                = 6
+FLIGHT_MOTION_TYPE              = 7
+POINT_MOTION_TYPE               = 8
+FLEEING_MOTION_TYPE             = 9
+DISTRACT_MOTION_TYPE            = 10
+ASSISTANCE_MOTION_TYPE          = 11
+ASSISTANCE_DISTRACT_MOTION_TYPE = 12
+TIMED_FLEEING_MOTION_TYPE       = 13
+FOLLOW_MOTION_TYPE              = 14
+ROTATE_MOTION_TYPE              = 15
+EFFECT_MOTION_TYPE              = 16
+SPLINE_CHAIN_MOTION_TYPE        = 17
+FORMATION_MOTION_TYPE           = 18
 ```
 
 ---
@@ -1566,8 +1572,8 @@ CHARGE_MOTION_TYPE     = 12
 TrinityCore tem estruturas fixas. Tudo que voce criar DEVE:
 1. Usar classes existentes (`ScriptedAI`, `BossAI`, `SpellScriptLoader`, etc)
 2. Seguir os mesmos headers/namespaces
-3. Usar os mesmos hooks (UpdateAI, EnterCombat, JustDied, etc)
-4. Registrar scripts com `AddSC_` + `new ClassName()`
+3. Usar os mesmos hooks (UpdateAI, JustEngagedWith, JustDied, etc - `EnterCombat` NAO existe neste core)
+4. Registrar scripts com `AddSC_` + `new ClassName()` OU macros `Register<Zona>CreatureAI()` / `RegisterSpellScript()`
 5. Usar `_events` ScheduleEvent/ExecuteEvent (nao timer manual)
 6. Usar `enum Spells/Events/Creatures/GameObjects` no topo
 7. Boss em raid = BossAI + InstanceScript
