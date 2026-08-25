@@ -7,16 +7,19 @@
 ## Seção 1: Estrutura de Scripts no Cataclysm
 
 ### Organização de Pastas
-- `src/server/scripts/EasternKingdoms/`
-- `src/server/scripts/Kalimdor/` (inclui `CavernsOfTime/` com `DragonSoul/`, `ZulGurub/`, etc.)
-- `src/server/scripts/Outland/`
-- `src/server/scripts/Northrend/`
-- `src/server/scripts/Maelstrom/`
+- `src/server/scripts/Battlefield/`
+- `src/server/scripts/Commands/`
+- `src/server/scripts/Custom/`
+- `src/server/scripts/EasternKingdoms/` (inclui `ZulGurub/`, `ZulAman/`, `BastionOfTwilight/`, `ThroneOfTheTides/`, etc.)
 - `src/server/scripts/Events/`
+- `src/server/scripts/Kalimdor/` (inclui `CavernsOfTime/` com `DragonSoul/`, `EndTime/`, `HourOfTwilight/`, `WellOfEternity/`, além de `Firelands/`)
+- `src/server/scripts/Maelstrom/`
+- `src/server/scripts/Northrend/`
+- `src/server/scripts/OutdoorPvP/`
+- `src/server/scripts/Outland/`
+- `src/server/scripts/Pet/`
 - `src/server/scripts/Spells/`
 - `src/server/scripts/World/`
-- `src/server/scripts/Pet/`
-- `src/server/scripts/Custom/`
 
 ### Classe Base para Scripts
 - **Criaturas (Boss)**: `struct boss_name : public BossAI`
@@ -27,7 +30,7 @@
 - **Spells**: `struct spell_name : public SpellScript` ou `class spell_name : public SpellScriptLoader`
 
 ### Classe de IA para Chefões (BossAI)
-Exemplo real (extraído de `ZulGurub/boss_jindo_the_godbreaker.cpp`):
+Exemplo real (extraído de `src/server/scripts/EasternKingdoms/ZulGurub/boss_jindo_the_godbreaker.cpp`):
 
 ```cpp
 struct boss_jindo_the_godbreaker : public BossAI
@@ -81,14 +84,13 @@ struct boss_jindo_the_godbreaker : public BossAI
         }
         DoMeleeAttackIfReady();
     }
-
-private:
-    EventMap events;
 };
+```
+Nota: `events` (EventMap) já é membro herdado de `BossAI` — **não redeclarar** na struct do boss.
 ```
 
 ### Sistema de Eventos (EventMap)
-- **Membro**: `EventMap events;`
+- **Membro**: em bosses (`BossAI`), `EventMap events;` é herdado de `BossAI` (definido em `ScriptedCreature.h`). Em NPCs simples (`ScriptedAI`), declare membro próprio — convenção do core: `EventMap _events;`.
 - **Agendamento**: `events.ScheduleEvent(EVENT_ID, 1s, 0, PHASE_ID);`
   - `1s`, `500ms` são literais crono (C++11/TC).
   - O 3º param é `group` (geralmente 0).
@@ -99,7 +101,7 @@ private:
 - **Fases**: `events.SetPhase(PHASE_ID);` e `events.IsInPhase(PHASE_ID)`.
 
 ### Hooks de Combate
-- `JustEngagedWith(Unit* who)` (Usado no Cata, substitui `EnterCombat` em muitos contextos, mas `EnterCombat` também existe em `ScriptedAI`).
+- `JustEngagedWith(Unit* who)` — hook de início de combate deste core (declarado em `CreatureAI.h`). O antigo `EnterCombat` **NÃO existe** neste core.
 - `JustDied(Unit* killer)`
 - `EnterEvadeMode(EvadeReason why)`
 - `DamageTaken(Unit* attacker, uint32& damage)`
@@ -136,13 +138,13 @@ private:
 | MoP (5.4.8) | Cataclysm (4.3.4) | Observação |
 |-------------|-------------------|-------------|
 | `JustEngagedWith(Unit* who)` | `JustEngagedWith(Unit* who)` | Igual. |
-| `EnterCombat(Unit* who)` | `JustEngagedWith(Unit* who)` | Cata prefere `JustEngagedWith`. `EnterCombat` existe mas é menos usado em bosses. |
+| `EnterCombat(Unit* who)` | `JustEngagedWith(Unit* who)` | Hook renomeado. Este core possui apenas `JustEngagedWith`; `EnterCombat` não existe. |
 | `events.ScheduleEvent(id, delay, group, flags)` | `events.ScheduleEvent(id, delay, group, phase)` | Cata usa `phase` como 4º param. `delay` usa chrono literals (`1s`, `500ms`). |
 | `DoCast(target, spellId, triggerFlags)` | `DoCast(target, spellId)` ou `me->CastSpell(target, spellId, true/false)` | `DoCast` simples é comum. |
 | `BossAI` | `BossAI` | Estrutura idêntica. Construtor: `boss_name(Creature* c) : BossAI(c, DATA_ID)`. |
 | `Talk(id, target)` | `Talk(id, target)` | Igual. |
 | `SummonCreature(id, pos, tempSummonType, duration)` | `me->SummonCreature(id, pos, tempSummonType, duration)` ou `map->SummonCreature(...)` | `Map::SummonCreature` usado para evitar phasing issues. |
-| `instance->instance->GetData()` | `instance->GetData()` | `instance` é membro direto em `BossAI`. |
+| `instance->GetData()` | `instance->GetData()` | `instance` é membro direto em `BossAI`. |
 | `uint32 diff` em `UpdateAI` | `uint32 diff` | Igual. |
 
 ---
@@ -199,23 +201,27 @@ class boss_ultraxion : public CreatureScript
 ```cpp
 namespace DragonSoul::Ultraxion
 {
-struct boss_ultraxionAI : public BossAI
+struct boss_ultraxion : public BossAI
 {
-    boss_ultraxionAI(Creature* creature) : BossAI(creature, DATA_ULTRAXION) { }
+    boss_ultraxion(Creature* creature) : BossAI(creature, DATA_ULTRAXION) { }
 
     void JustEngagedWith(Unit* who) override
     {
         BossAI::JustEngagedWith(who);
+        instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
         events.ScheduleEvent(EVENT_HOUR_OF_TWILIGHT, 15s, 0, PHASE_ONE);
     }
-
-private:
-    EventMap events;
 };
 }
 
 void AddSC_boss_ultraxion()
 {
     using namespace DragonSoul::Ultraxion;
-    RegisterDragonSoulCreatureAI(boss_ultraxionAI); // Ou similar
+    RegisterDragonSoulCreatureAI(boss_ultraxion);
 }
+```
+
+Observações sobre o padrão de saída:
+- Struct **sem sufixo** `AI` (padrão atual do core, ex.: `struct boss_jindo_the_godbreaker : public BossAI`).
+- `events` herdado de `BossAI` — sem redeclaração.
+- Registro usa a macro da zona (`RegisterZulGurubCreatureAI`, `RegisterDragonSoulCreatureAI`, etc.) dentro de `AddSC_*`, com `using namespace` do script.
