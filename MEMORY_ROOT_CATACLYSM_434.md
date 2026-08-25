@@ -87,7 +87,6 @@ struct boss_jindo_the_godbreaker : public BossAI
 };
 ```
 Nota: `events` (EventMap) já é membro herdado de `BossAI` — **não redeclarar** na struct do boss.
-```
 
 ### Sistema de Eventos (EventMap)
 - **Membro**: em bosses (`BossAI`), `EventMap events;` é herdado de `BossAI` (definido em `ScriptedCreature.h`). Em NPCs simples (`ScriptedAI`), declare membro próprio — convenção do core: `EventMap _events;`.
