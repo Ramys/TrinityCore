@@ -24,6 +24,8 @@ namespace DragonSoul
 {
 ObjectData const creatureData[] =
 {
+    { NPC_MORCHOK,                          DATA_MORCHOK                            },
+    { NPC_KOHCROM,                          DATA_MORCHOK                            },
     { BOSS_MADNESS_OF_DEATHWING,            DATA_MADNESS_OF_DEATHWING               },
     { NPC_DEATHWING_MADNESS_OF_DEATHWING,   DATA_DEATHWING_MADNESS_OF_DEATHWING     },
     { NPC_THRALL_MADNESS_OF_DEATHWING,      DATA_THRALL_MADNESS_OF_DEATHWING        },
@@ -66,6 +68,8 @@ public:
 
             switch (creature->GetEntry())
             {
+                case NPC_MORCHOK:
+                case NPC_KOHCROM:
                 case NPC_YSERA_MADNESS_OF_DEATHWING:
                 case NPC_ALEXSTRASZA_MADNESS_OF_DEATHWING:
                 case NPC_NOZDORMU_MADNESS_OF_DEATHWING:

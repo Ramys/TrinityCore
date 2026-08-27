@@ -54,6 +54,10 @@ enum DSDataTypes
 enum DSCreatures
 {
     // Bosses
+    NPC_MORCHOK                                 = 55265,
+    NPC_KOHCROM                                 = 55274, // @TODO: VERIFICAR ENTRY NO CREATURE_TEMPLATE 4.3.4 (gemeo do Morchok, modo Heroico)
+    NPC_RESONATING_CRYSTAL                      = 55269, // @TODO: VERIFICAR ENTRY NO CREATURE_TEMPLATE 4.3.4 (cristal ressonante)
+
     BOSS_MADNESS_OF_DEATHWING                   = 56173,
 
     /*Madness of Deathwing*/
