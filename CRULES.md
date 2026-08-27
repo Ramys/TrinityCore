@@ -769,8 +769,8 @@ Tipos de gameobject:
 ### 6.6 Creature text
 
 ```sql
-INSERT INTO `creature_text` (`entry`, `groupid`, `id`, `text`, `type`, `language`,
-    `probability`, `emote`, `duration`, `sound`, `BroadcastTextId`, `TextRange`, `comment`)
+INSERT INTO `creature_text` (`CreatureID`, `GroupID`, `ID`, `Text`, `Type`, `Language`,
+    `Probability`, `Emote`, `Duration`, `Sound`, `SoundType`, `BroadcastTextId`, `TextRange`, `comment`)
 VALUES
     (123456, 0, 0, 'Fools! You dare challenge me?', 14, 0,      -- 14 = yell
      100, 0, 0, 57224, BroadcastTextId, 0, 'boss_example aggro'),
