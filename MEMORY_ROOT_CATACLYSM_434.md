@@ -161,8 +161,9 @@ Diferenças confirmadas nos headers reais deste core (`src/server/game/Spells/Sp
 3. **`SpellObjectAreaTargetSelectFn` / `SpellHitFn` (typedefs de wrapper) NÃO existem.** Passe `&Classe::Metodo` direto ao `.Register`.
 4. **`SelectAggroTarget` (enum em `UnitAI.h`):** valores = `SELECT_TARGET_RANDOM`, `SELECT_TARGET_MAXTHREAT`, `SELECT_TARGET_MINTHREAT`, `SELECT_TARGET_MAXDISTANCE`, `SELECT_TARGET_MINDISTANCE`. **Não existe `SELECT_TARGET_NEAREST`** — use `SELECT_TARGET_MINDISTANCE` para "alvo mais próximo". O `SELECT_TARGET_NEAREST` do MoP vira `MINDISTANCE`.
 5. **Handler de dano de aura (4.3.4):** assinatura `void OnCalc(AuraEffect const* aurEff, Unit* victim, int32& damageOrHealing, int32& flatMod, float& pctMod)`; o hook chama-se `DoEffectCalcDamageAndHealing` (não `DoEffectCalcDamage`).
+6. **`AddSC_*` DEVE ficar em escopo GLOBAL (FORA de `namespace`).** O script loader (`kalimdor_script_loader.cpp`) declara e chama `void AddSC_boss_xxx();` em escopo global. Se a função for definida DENTRO de `namespace DragonSoul::Morchok { ... }`, o nome mangled vira `?AddSC_boss_xxx@Morchok@DragonSoul@@YAXXZ` e não bate com o global `?AddSC_boss_xxx@@YAXXZ` → **LNK2019 (símbolo externo não resolvido)** no link do `worldserver`. Padrão correto (vide exemplo ultraxion na Seção 1): as structs ficam DENTRO do namespace e `AddSC_*` FICA FORA, usando `using namespace DragonSoul::Morchok;` no corpo para acessar os tipos. Esta foi a causa exata do erro de link no port de `boss_morchok.cpp` (a função estava dentro do namespace).
 
-Estes pontos são a causa raiz dos erros de compilação no port de `boss_morchok.cpp` (MoP 5.4.8 -> Cata 4.3.4).
+Estes pontos (1 a 6) são a causa raiz dos erros de compilação/link no port de `boss_morchok.cpp` (MoP 5.4.8 -> Cata 4.3.4).
 
 ---
 
@@ -194,7 +195,7 @@ Regra: scripts dessas categorias **não devem ser migrados**. Substituir por com
 6. **Remova ou comente funcionalidades exclusivas do MoP**.
 7. **Ao final, liste todas as dúvidas e pendências** para validação manual.
 8. **Registro**: Use `RegisterZoneCreatureAI` ou macros específicos da zona (`RegisterZulGurubCreatureAI`).
-9. **Namespaces**: Use `namespace ZoneName::ScriptName { ... }` para organização.
+9. **Namespaces**: Use `namespace ZoneName::ScriptName { ... }` para organizar structs/classes. A função `AddSC_*` fica FORA do namespace (escopo global) — ver Seção 2b ponto 6.
 
 ---
 

@@ -1574,7 +1574,7 @@ TrinityCore tem estruturas fixas. Tudo que voce criar DEVE:
 1. Usar classes existentes (`ScriptedAI`, `BossAI`, `SpellScriptLoader`, etc)
 2. Seguir os mesmos headers/namespaces
 3. Usar os mesmos hooks (UpdateAI, JustEngagedWith, JustDied, etc - `EnterCombat` NAO existe neste core)
-4. Registrar scripts com `AddSC_` + `new ClassName()` OU macros `Register<Zona>CreatureAI()` / `RegisterSpellScript()`
+4. Registrar scripts com `AddSC_` + `new ClassName()` OU macros `Register<Zona>CreatureAI()` / `RegisterSpellScript()`. A função `AddSC_*` DEVE ser definida em escopo global (fora de qualquer `namespace`); defini-la dentro de um namespace gera LNK2019 no link.
 5. Usar `_events` ScheduleEvent/ExecuteEvent (nao timer manual)
 6. Usar `enum Spells/Events/Creatures/GameObjects` no topo
 7. Boss em raid = BossAI + InstanceScript
