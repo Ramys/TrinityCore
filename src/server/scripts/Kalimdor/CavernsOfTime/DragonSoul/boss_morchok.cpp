@@ -223,7 +223,7 @@ struct boss_morchok : public BossAI
                     break;
 
                 case EVENT_CRUSH_ARMOR:
-                    if (Unit* target = SelectTarget(SELECT_TARGET_NEAREST, 0, 0.0f, true))
+                    if (Unit* target = SelectTarget(SELECT_TARGET_MINDISTANCE, 0, 0.0f, true))
                         DoCast(target, SPELL_CRUSH_ARMOR);
                     events.ScheduleEvent(EVENT_CRUSH_ARMOR, std::chrono::milliseconds(TIMER_CRUSH_ARMOR), 0, PHASE_NORMAL);
                     break;
@@ -429,7 +429,7 @@ public:
 
     class spell_morchok_stomp_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_morchok_stomp_SpellScript);
+
 
         void FilterTargets(std::list<WorldObject*>& targets)
         {
@@ -450,7 +450,7 @@ public:
 
         void Register() override
         {
-            OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_morchok_stomp_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ENEMY);
+            OnObjectAreaTargetSelect.Register(&spell_morchok_stomp_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ENEMY);
         }
 
     private:
@@ -478,7 +478,7 @@ public:
 
     class spell_morchok_black_blood_of_the_earth_dmg_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_morchok_black_blood_of_the_earth_dmg_SpellScript);
+
 
         void FilterTargets(std::list<WorldObject*>& targets)
         {
@@ -493,8 +493,8 @@ public:
 
         void Register() override
         {
-            OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_morchok_black_blood_of_the_earth_dmg_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ENEMY);
-            OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_morchok_black_blood_of_the_earth_dmg_SpellScript::FilterTargets, EFFECT_1, TARGET_UNIT_DEST_AREA_ENEMY);
+            OnObjectAreaTargetSelect.Register(&spell_morchok_black_blood_of_the_earth_dmg_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ENEMY);
+            OnObjectAreaTargetSelect.Register(&spell_morchok_black_blood_of_the_earth_dmg_SpellScript::FilterTargets, EFFECT_1, TARGET_UNIT_DEST_AREA_ENEMY);
         }
 
     private:
@@ -520,7 +520,7 @@ public:
 
     class spell_morchok_resonating_crystal_dmg_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_morchok_resonating_crystal_dmg_SpellScript);
+
 
         void FilterTargets(std::list<WorldObject*>& targets)
         {
@@ -534,7 +534,7 @@ public:
 
         void Register() override
         {
-            OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_morchok_resonating_crystal_dmg_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ENEMY);
+            OnObjectAreaTargetSelect.Register(&spell_morchok_resonating_crystal_dmg_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ENEMY);
         }
 
     private:
