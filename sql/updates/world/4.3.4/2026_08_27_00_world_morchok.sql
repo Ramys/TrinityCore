@@ -13,8 +13,8 @@ UPDATE `creature_template` SET `ScriptName` = 'npc_morchok_resonating_crystal' W
 --    SAY_CRYSTAL=9, SAY_KILL=10, SAY_KOHCROM=11, ANN_CRYSTAL=12
 -- @TODO: preencher `text` / `BroadcastTextId` com dados oficiais do cliente 4.3.4
 --        (BroadcastText.dbc). Vazio = Talk vira no-op (sem crash).
-DELETE FROM `creature_text` WHERE `entry` = 55265;
-INSERT INTO `creature_text` (`entry`, `groupid`, `id`, `type`, `sound`, `probability`, `comment`, `text`) VALUES
+DELETE FROM `creature_text` WHERE `CreatureID` = 55265;
+INSERT INTO `creature_text` (`CreatureID`, `GroupID`, `ID`, `Type`, `Sound`, `Probability`, `comment`, `Text`) VALUES
 (55265, 0,  0, 14, 0, 100, 'Morchok - SAY_AGGRO',    ''),
 (55265, 1,  0, 14, 0, 100, 'Morchok - SAY_DEATH',    ''),
 (55265, 6,  0, 14, 0, 100, 'Morchok - SAY_GROUND1',  ''),
