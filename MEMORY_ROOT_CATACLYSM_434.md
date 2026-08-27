@@ -148,6 +148,24 @@ Nota: `events` (EventMap) já é membro herdado de `BossAI` — **não redeclara
 
 ---
 
+## Seção 2b: SpellScript / AuraScript API (Cataclysm 4.3.4) — CRÍTICO p/ port de MoP
+
+Diferenças confirmadas nos headers reais deste core (`src/server/game/Spells/SpellScript.h`, `src/server/game/AI/CoreAI/UnitAI.h`) e em scripts existentes (`boss_alizabal.cpp`, `boss_occuthar.cpp`, `boss_pit_lord_argaloth.cpp`, etc.):
+
+1. **Não existe `PrepareSpellScript` nem `PrepareAuraScript`** (macro ausente neste fork). Remova essas linhas dos scripts portados de MoP.
+2. **Registro de hooks via `.Register(...)` direto** — não use `+= SpellHitFn(...)` / `+= AuraEffectCalcDamageFn(...)` (estilo antigo do TC 3.3.5). Exemplos reais:
+   - `OnObjectAreaTargetSelect.Register(&spell_x::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);`
+   - `OnHit.Register(&spell_x::HandleOnHit);`
+   - `AfterHit.Register(&spell_x::HandleAfterHit);`
+   - `DoEffectCalcDamageAndHealing.Register(&spell_x::OnCalc, EFFECT_0, SPELL_AURA_DUMMY);`
+3. **`SpellObjectAreaTargetSelectFn` / `SpellHitFn` (typedefs de wrapper) NÃO existem.** Passe `&Classe::Metodo` direto ao `.Register`.
+4. **`SelectAggroTarget` (enum em `UnitAI.h`):** valores = `SELECT_TARGET_RANDOM`, `SELECT_TARGET_MAXTHREAT`, `SELECT_TARGET_MINTHREAT`, `SELECT_TARGET_MAXDISTANCE`, `SELECT_TARGET_MINDISTANCE`. **Não existe `SELECT_TARGET_NEAREST`** — use `SELECT_TARGET_MINDISTANCE` para "alvo mais próximo". O `SELECT_TARGET_NEAREST` do MoP vira `MINDISTANCE`.
+5. **Handler de dano de aura (4.3.4):** assinatura `void OnCalc(AuraEffect const* aurEff, Unit* victim, int32& damageOrHealing, int32& flatMod, float& pctMod)`; o hook chama-se `DoEffectCalcDamageAndHealing` (não `DoEffectCalcDamage`).
+
+Estes pontos são a causa raiz dos erros de compilação no port de `boss_morchok.cpp` (MoP 5.4.8 -> Cata 4.3.4).
+
+---
+
 ## Seção 3: Conteúdo que NÃO existe no Cataclysm
 
 - **Pandaria (scripts em `Pandaria/`)**: Não existe.

@@ -410,7 +410,7 @@ public:
 
     class spell_example_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_example_SpellScript);
+        // 4.3.4: este core NAO possui a macro PrepareSpellScript. Registre os hooks em Register() via .Register(...).
 
         bool Validate(SpellInfo const* /*spellEntry*/) override
         {
@@ -435,7 +435,8 @@ public:
 
         void Register() override
         {
-            AfterHit += SpellHitFn(spell_example_SpellScript::HandleAfterHit);
+            // 4.3.4: hook direto via .Register (sem SpellHitFn / sem operador +=).
+            AfterHit.Register(&spell_example_SpellScript::HandleAfterHit);
         }
     };
 
@@ -1085,7 +1086,7 @@ public:
 
     class spell_q_example_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_q_example_SpellScript);
+        // 4.3.4: sem PrepareSpellScript.
 
         bool Validate(SpellInfo const* /*spell*/) override
         {
@@ -1105,7 +1106,7 @@ public:
 
         void Register() override
         {
-            AfterHit += SpellHitFn(spell_q_example_SpellScript::HandleQuestComplete);
+            AfterHit.Register(&spell_q_example_SpellScript::HandleQuestComplete);
         }
     };
 
@@ -1298,21 +1299,21 @@ Spell::CalculateDamage()
 ### 11.2 Modificando dano em scripts
 
 ```cpp
-// Aura que modifica dano feito
+// Aura que modifica dano de DoT/HoT feito
 class spell_example_damage_done : public AuraScript
 {
-    PrepareAuraScript(spell_example_damage_done);
+    // 4.3.4: sem PrepareAuraScript. O hook de dano e cura e' DoEffectCalcDamageAndHealing (nao DoEffectCalcDamage).
 
-    void OnCalcDamage(Unit const* victim, int32& damage, SpellInfo const* spellInfo)
+    void OnCalcDamageAndHealing(AuraEffect const* /*aurEff*/, Unit* /*victim*/, int32& damageOrHealing, int32& /*flatMod*/, float& /*pctMod*/)
     {
         // +20% fire damage
-        if (spellInfo->GetSchoolMask() & SPELL_SCHOOL_MASK_FIRE)
-            damage += CalculatePct(damage, 20);
+        if (GetSpellInfo()->GetSchoolMask() & SPELL_SCHOOL_MASK_FIRE)
+            damageOrHealing += CalculatePct(damageOrHealing, 20);
     }
 
     void Register() override
     {
-        DoEffectCalcDamage += AuraEffectCalcDamageFn(spell_example_damage_done::OnCalcDamage, EFFECT_0, SPELL_AURA_DUMMY);
+        DoEffectCalcDamageAndHealing.Register(&spell_example_damage_done::OnCalcDamageAndHealing, EFFECT_0, SPELL_AURA_DUMMY);
     }
 };
 ```
