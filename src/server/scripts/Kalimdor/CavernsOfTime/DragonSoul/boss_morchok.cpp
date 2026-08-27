@@ -553,6 +553,7 @@ public:
 
     SpellScript* GetSpellScript() const override { return new spell_morchok_resonating_crystal_dmg_SpellScript(); }
 };
+} // namespace DragonSoul::Morchok
 
 void AddSC_boss_morchok()
 {
@@ -565,4 +566,3 @@ void AddSC_boss_morchok()
     RegisterSpellScript(spell_morchok_black_blood_of_the_earth_dmg);
     RegisterSpellScript(spell_morchok_resonating_crystal_dmg);
 }
-} // namespace DragonSoul::Morchok
