@@ -16,6 +16,8 @@
 #include "ScriptedCreature.h"
 #include "ScriptMgr.h"
 #include "SpellScript.h"
+#include "SpellAuraEffects.h"
+#include "SpellInfo.h"
 #include "GameObject.h"
 #include "Player.h"
 #include "InstanceScript.h"
@@ -174,6 +176,7 @@ struct boss_morchok : public BossAI
     void JustDied(Unit* /*killer*/) override
     {
         _JustDied();
+        instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
         Talk(SAY_DEATH);
         if (_kohcrom && _kohcrom->IsAlive())
             Unit::Kill(me, _kohcrom, false);
@@ -184,8 +187,8 @@ struct boss_morchok : public BossAI
     void EnterEvadeMode(EvadeReason why) override
     {
         BossAI::EnterEvadeMode(why);
-        if (_kohcrom && _kohcrom->IsAlive())
-            _kohcrom->AI()->EnterEvadeMode(why);
+        instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
+        _DespawnAtEvade();
         if (instance)
             instance->SetBossState(DATA_MORCHOK, FAIL);
     }
