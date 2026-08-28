@@ -1,15 +1,7 @@
 /*
  * TrinityCore 4.3.4 - Dragon Soul: Morchok
- * Ref: wowpedia Morchok, DOCX Morchok_Boss_Reference, adaptado de Legends-of-Azeroth (5.4.8).
- * Padrao do projeto: struct : public BossAI + RegisterDragonSoulCreatureAI.
- *
- * @TODO (verificar Spell.dbc 4.3.4 / creature_text):
- *  - Entries NPC_KOHCROM (55274) e NPC_RESONATING_CRYSTAL (55269) no creature_template.
- *  - IDs marcados @TODO em enum Spells.
- *  - Entradas de texto (SAY_*) em creature_text para NPC 55265.
- *  - ScriptName das adds no creature_template:
- *      NPC_KOHCROM        -> npc_morchok_kohcrom
- *      NPC_RESONATING_CRYSTAL -> npc_morchok_resonating_crystal
+ * Ref: cata.wowhead.com / wowpedia Morchok (Dragon Soul, 4.3.4).
+ * Padrao: struct : public BossAI + RegisterDragonSoulCreatureAI.
  */
 
 #include "dragon_soul.h"
@@ -25,73 +17,76 @@
 #include "TemporarySummon.h"
 #include <cmath>
 #include <list>
+#include <vector>
+#include <algorithm>
 
 namespace DragonSoul::Morchok
 {
+
 enum ScriptedTexts
 {
-    SAY_AGGRO     = 0,
-    SAY_DEATH     = 1,
-    SAY_GROUND1   = 6,
-    SAY_GROUND2   = 7,
-    SAY_CRYSTAL   = 9,
-    SAY_KILL      = 10,
-    SAY_KOHCROM   = 11,
-    ANN_CRYSTAL   = 12,
+    SAY_AGGRO   = 0,
+    SAY_DEATH   = 1,
+    SAY_GROUND1 = 6,
+    SAY_GROUND2 = 7,
+    SAY_CRYSTAL = 9,
+    SAY_KILL    = 10,
+    SAY_KOHCROM = 11,
+    ANN_CRYSTAL = 12
 };
 
 enum Spells
 {
-    SPELL_BERSERK                           = 47008,
-    SPELL_STOMP                             = 103414,
-    SPELL_CRUSH_ARMOR                       = 103687,
-    SPELL_RESONATING_CRYSTAL                = 103640,
-    SPELL_RESONATING_CRYSTAL_SUMMON         = 103641, // @TODO (5.4.8 usa 103639)
-    SPELL_RESONATING_CRYSTAL_DMG            = 103494, // @TODO explosao AoE
-    SPELL_FURIOUS                           = 103846,
-    SPELL_BLACK_BLOOD_OF_THE_EARTH          = 103785,
-    SPELL_EARTHS_VENGEANCE                  = 103548, // @TODO Heroico: pilares de abrigo
-    SPELL_THE_EARTH_CONSUMES_YOU            = 103558, // @TODO Heroico: puxa + 5%HP/s
-    SPELL_SUMMON_KOHCROM                    = 104161, // @TODO Heroico: invoca gemeo
-    SPELL_KOHCROM_VISUAL                    = 103807, // @TODO visual da separacao
-    SPELL_EARTH_SHATTERING                  = 103694, // @TODO Heroico: Stomp em toda a raid
+    SPELL_BERSERK                   = 47008,
+    SPELL_STOMP                     = 103414,
+    SPELL_CRUSH_ARMOR               = 103687,
+    SPELL_RESONATING_CRYSTAL        = 103640,
+    SPELL_RESONATING_CRYSTAL_DMG    = 103494,
+    SPELL_FURIOUS                   = 103846,
+    SPELL_BLACK_BLOOD_OF_THE_EARTH  = 103785,
+    SPELL_EARTHS_VENGEANCE          = 103548,
+    SPELL_THE_EARTH_CONSUMES_YOU    = 103558,
+    SPELL_SUMMON_KOHCROM            = 104161,
+    SPELL_KOHCROM_VISUAL            = 103807,
+    SPELL_EARTH_SHATTERING          = 103694
 };
 
 enum Events
 {
-    EVENT_STOMP                 = 1,
+    EVENT_STOMP                  = 1,
     EVENT_CRUSH_ARMOR,
     EVENT_RESONATING_CRYSTAL,
     EVENT_THE_EARTH_CONSUMES_YOU,
     EVENT_EARTHS_VENGEANCE,
     EVENT_BLACK_BLOOD,
     EVENT_BLACK_BLOOD_END,
-    EVENT_BERSERK,
+    EVENT_BERSERK
 };
 
 enum Phases
 {
     PHASE_NORMAL      = 1,
-    PHASE_BLACK_BLOOD,
+    PHASE_BLACK_BLOOD
 };
 
 enum MiscData
 {
-    DATA_GUID_1   = 1,
-    DATA_GUID_2   = 2,
-    ACTION_TWIN_LINK = 100,
+    DATA_GUID_1      = 1,
+    DATA_GUID_2      = 2,
+    ACTION_TWIN_LINK = 100
 };
 
 enum MiscTimers
 {
-    TIMER_STOMP              = 25000,
-    TIMER_CRUSH_ARMOR        = 10000,
-    TIMER_RESONATING_CRYSTAL = 12000,
-    TIMER_BLACK_BLOOD        = 12000,
-    TIMER_CONSUME            = 5000,
-    TIMER_BERSERK            = 420000, // 7 min
-    CRYSTALS_BEFORE_BLOOD    = 2,
+    TIMER_STOMP               = 25000,
+    TIMER_CRUSH_ARMOR         = 10000,
+    TIMER_RESONATING_CRYSTAL  = 12000,
+    TIMER_BLACK_BLOOD         = 12000,
+    TIMER_CONSUME             = 5000,
+    TIMER_BERSERK             = 420000,
+    CRYSTALS_BEFORE_BLOOD     = 2
 };
+
 struct boss_morchok : public BossAI
 {
     boss_morchok(Creature* creature) : BossAI(creature, DATA_MORCHOK), _kohcrom(nullptr), _stompCount(0), _crystalCount(0), _kohcromSummoned(false)
@@ -126,8 +121,7 @@ struct boss_morchok : public BossAI
         Talk(SAY_AGGRO);
         events.SetPhase(PHASE_NORMAL);
         events.ScheduleEvent(EVENT_STOMP, std::chrono::seconds(8), 0, PHASE_NORMAL);
-        if (!_isHeroic)
-            events.ScheduleEvent(EVENT_CRUSH_ARMOR, std::chrono::seconds(5), 0, PHASE_NORMAL);
+        events.ScheduleEvent(EVENT_CRUSH_ARMOR, std::chrono::seconds(5), 0, PHASE_NORMAL);
         events.ScheduleEvent(EVENT_RESONATING_CRYSTAL, std::chrono::seconds(14), 0, PHASE_NORMAL);
         events.ScheduleEvent(EVENT_BERSERK, std::chrono::milliseconds(TIMER_BERSERK));
         if (instance)
@@ -157,18 +151,15 @@ struct boss_morchok : public BossAI
         if (!me->IsAlive())
             return;
 
-        // Heroico: invoca Kohcrom aos 90% de vida.
         if (_isHeroic && !_kohcromSummoned && me->HealthBelowPctDamaged(90, damage))
         {
             _kohcromSummoned = true;
             SummonKohcrom();
         }
 
-        // Furious aos 20%.
         if (!me->HasAura(SPELL_FURIOUS) && me->HealthBelowPctDamaged(20, damage))
             DoCastSelf(SPELL_FURIOUS);
 
-        // Heroico: vida compartilhada (Morchok eh a barra real).
         if (_kohcrom && _kohcrom->IsAlive())
             _kohcrom->SetHealth(me->GetHealth());
     }
@@ -176,7 +167,8 @@ struct boss_morchok : public BossAI
     void JustDied(Unit* /*killer*/) override
     {
         _JustDied();
-        instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
+        if (instance)
+            instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
         Talk(SAY_DEATH);
         if (_kohcrom && _kohcrom->IsAlive())
             Unit::Kill(me, _kohcrom, false);
@@ -184,10 +176,12 @@ struct boss_morchok : public BossAI
             instance->SetBossState(DATA_MORCHOK, DONE);
     }
 
+
     void EnterEvadeMode(EvadeReason why) override
     {
         BossAI::EnterEvadeMode(why);
-        instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
+        if (instance)
+            instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
         _DespawnAtEvade();
         if (instance)
             instance->SetBossState(DATA_MORCHOK, FAIL);
@@ -215,28 +209,28 @@ struct boss_morchok : public BossAI
             {
                 case EVENT_STOMP:
                     if (_isHeroic && _stompCount % 3 == 2)
-                        DoCastAOE(SPELL_EARTH_SHATTERING); // @TODO Heroico: todo o raid
+                        DoCastAOE(SPELL_EARTH_SHATTERING);
                     else
-                        DoCastVictim(SPELL_STOMP);
+                        DoCastAOE(SPELL_STOMP);
                     ++_stompCount;
                     events.ScheduleEvent(EVENT_STOMP, std::chrono::milliseconds(TIMER_STOMP), 0, PHASE_NORMAL);
                     break;
 
                 case EVENT_CRUSH_ARMOR:
-                    if (Unit* target = SelectTarget(SELECT_TARGET_MINDISTANCE, 0, 0.0f, true))
-                        DoCast(target, SPELL_CRUSH_ARMOR);
+                    if (Unit* victim = me->GetVictim())
+                        DoCast(victim, SPELL_CRUSH_ARMOR);
                     events.ScheduleEvent(EVENT_CRUSH_ARMOR, std::chrono::milliseconds(TIMER_CRUSH_ARMOR), 0, PHASE_NORMAL);
                     break;
 
                 case EVENT_RESONATING_CRYSTAL:
                     if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
                         DoCast(target, SPELL_RESONATING_CRYSTAL);
+                    Talk(SAY_CRYSTAL);
                     if (++_crystalCount >= CRYSTALS_BEFORE_BLOOD)
                     {
                         _crystalCount = 0;
                         events.CancelEvent(EVENT_STOMP);
-                        if (!_isHeroic)
-                            events.CancelEvent(EVENT_CRUSH_ARMOR);
+                        events.CancelEvent(EVENT_CRUSH_ARMOR);
                         events.CancelEvent(EVENT_RESONATING_CRYSTAL);
                         events.SetPhase(PHASE_BLACK_BLOOD);
                         events.ScheduleEvent(EVENT_THE_EARTH_CONSUMES_YOU, std::chrono::milliseconds(500));
@@ -248,12 +242,12 @@ struct boss_morchok : public BossAI
                     break;
 
                 case EVENT_THE_EARTH_CONSUMES_YOU:
-                    DoCastAOE(SPELL_THE_EARTH_CONSUMES_YOU); // @TODO Heroico
+                    DoCastAOE(SPELL_THE_EARTH_CONSUMES_YOU);
                     events.ScheduleEvent(EVENT_EARTHS_VENGEANCE, std::chrono::milliseconds(TIMER_CONSUME));
                     break;
 
                 case EVENT_EARTHS_VENGEANCE:
-                    DoCastAOE(SPELL_EARTHS_VENGEANCE); // @TODO Heroico: pilares
+                    DoCastAOE(SPELL_EARTHS_VENGEANCE);
                     events.ScheduleEvent(EVENT_BLACK_BLOOD, std::chrono::seconds(2));
                     break;
 
@@ -266,8 +260,7 @@ struct boss_morchok : public BossAI
                     events.SetPhase(PHASE_NORMAL);
                     events.ScheduleEvent(EVENT_STOMP, std::chrono::seconds(1), 0, PHASE_NORMAL);
                     events.ScheduleEvent(EVENT_RESONATING_CRYSTAL, std::chrono::milliseconds(TIMER_RESONATING_CRYSTAL), 0, PHASE_NORMAL);
-                    if (!_isHeroic)
-                        events.ScheduleEvent(EVENT_CRUSH_ARMOR, std::chrono::milliseconds(TIMER_CRUSH_ARMOR), 0, PHASE_NORMAL);
+                    events.ScheduleEvent(EVENT_CRUSH_ARMOR, std::chrono::milliseconds(TIMER_CRUSH_ARMOR), 0, PHASE_NORMAL);
                     break;
 
                 case EVENT_BERSERK:
@@ -279,23 +272,23 @@ struct boss_morchok : public BossAI
         DoMeleeAttackIfReady();
     }
 };
+
+
 struct npc_morchok_kohcrom : public BossAI
 {
-    npc_morchok_kohcrom(Creature* creature) : BossAI(creature, DATA_MORCHOK), _stompCount(0), _twin(nullptr)
+    npc_morchok_kohcrom(Creature* creature) : BossAI(creature, DATA_MORCHOK), _twin(nullptr)
     {
         me->ApplySpellImmune(0, IMMUNITY_EFFECT, SPELL_EFFECT_KNOCK_BACK, true);
         me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_GRIP, true);
         me->ApplySpellImmune(0, IMMUNITY_STATE, SPELL_AURA_MOD_TAUNT, true);
     }
 
-    uint8 _stompCount;
-    Creature* _twin; // Morchok (barra de vida real)
+    Creature* _twin;
 
     void Reset() override
     {
         _Reset();
         _twin = nullptr;
-        _stompCount = 0;
     }
 
     void DoAction(int32 action) override
@@ -308,8 +301,9 @@ struct npc_morchok_kohcrom : public BossAI
     {
         BossAI::JustEngagedWith(who);
         events.SetPhase(PHASE_NORMAL);
-        events.ScheduleEvent(EVENT_STOMP, std::chrono::seconds(8), 0, PHASE_NORMAL);
-        events.ScheduleEvent(EVENT_RESONATING_CRYSTAL, std::chrono::seconds(14), 0, PHASE_NORMAL);
+        events.ScheduleEvent(EVENT_STOMP, std::chrono::seconds(12), 0, PHASE_NORMAL);
+        events.ScheduleEvent(EVENT_RESONATING_CRYSTAL, std::chrono::seconds(18), 0, PHASE_NORMAL);
+        events.ScheduleEvent(EVENT_CRUSH_ARMOR, std::chrono::seconds(9), 0, PHASE_NORMAL);
     }
 
     void DamageTaken(Unit* /*attacker*/, uint32& damage) override
@@ -317,7 +311,6 @@ struct npc_morchok_kohcrom : public BossAI
         if (!me->IsAlive())
             return;
 
-        // Vida compartilhada: dano ao gemeo reduz a barra real (Morchok).
         if (_twin && _twin->IsAlive())
         {
             _twin->SetHealth(_twin->GetHealth() - damage);
@@ -357,12 +350,14 @@ struct npc_morchok_kohcrom : public BossAI
             switch (eventId)
             {
                 case EVENT_STOMP:
-                    if (_stompCount % 3 == 2)
-                        DoCastAOE(SPELL_EARTH_SHATTERING); // @TODO Heroico: todo o raid
-                    else
-                        DoCastVictim(SPELL_STOMP);
-                    ++_stompCount;
+                    DoCastAOE(SPELL_STOMP);
                     events.ScheduleEvent(EVENT_STOMP, std::chrono::milliseconds(TIMER_STOMP), 0, PHASE_NORMAL);
+                    break;
+
+                case EVENT_CRUSH_ARMOR:
+                    if (Unit* victim = me->GetVictim())
+                        DoCast(victim, SPELL_CRUSH_ARMOR);
+                    events.ScheduleEvent(EVENT_CRUSH_ARMOR, std::chrono::milliseconds(TIMER_CRUSH_ARMOR), 0, PHASE_NORMAL);
                     break;
 
                 case EVENT_RESONATING_CRYSTAL:
@@ -377,11 +372,15 @@ struct npc_morchok_kohcrom : public BossAI
     }
 };
 
+
 struct npc_morchok_resonating_crystal : public ScriptedAI
 {
-    npc_morchok_resonating_crystal(Creature* creature) : ScriptedAI(creature), _exploded(false) { }
+    npc_morchok_resonating_crystal(Creature* creature) : ScriptedAI(creature), _exploded(false), _timer(12000)
+    {
+    }
 
     bool _exploded;
+    uint32 _timer;
     ObjectGuid _target;
 
     void IsSummonedBy(Unit* /*summoner*/) override
@@ -390,10 +389,19 @@ struct npc_morchok_resonating_crystal : public ScriptedAI
             _target = target->GetGUID();
     }
 
-    void UpdateAI(uint32 /*diff*/) override
+    void UpdateAI(uint32 diff) override
     {
         if (_exploded)
             return;
+
+        _timer -= diff;
+        if (_timer <= 0)
+        {
+            _exploded = true;
+            DoCastAOE(SPELL_RESONATING_CRYSTAL_DMG);
+            me->DespawnOrUnsummon(2000);
+            return;
+        }
 
         Unit* target = ObjectAccessor::GetUnit(*me, _target);
         if (!target)
@@ -421,7 +429,8 @@ struct npc_morchok_resonating_crystal : public ScriptedAI
         }
     }
 };
-// Stomp: registra os 2 jogadores mais proximos (levam dano dobrado).
+
+// Stomp: alvo atual e aliado mais proximo recebem dano dobrado.
 class spell_morchok_stomp : public SpellScriptLoader
 {
 public:
@@ -429,28 +438,28 @@ public:
 
     class spell_morchok_stomp_SpellScript : public SpellScript
     {
-
+        std::vector<ObjectGuid> _doubled;
 
         void FilterTargets(std::list<WorldObject*>& targets)
         {
             if (!GetCaster() || targets.empty())
                 return;
-            if (Creature* mor = GetCaster()->ToCreature())
-            {
-                targets.sort(DistanceOrderPred(GetCaster()));
-                auto itr = targets.begin();
-                mor->AI()->SetGUID((*itr)->GetGUID(), DATA_GUID_1);
-                if (targets.size() > 1)
-                {
-                    ++itr;
-                    mor->AI()->SetGUID((*itr)->GetGUID(), DATA_GUID_2);
-                }
-            }
+            targets.sort(DistanceOrderPred(GetCaster()));
+            uint8 count = 0;
+            for (auto itr = targets.begin(); itr != targets.end() && count < 2; ++itr, ++count)
+                _doubled.push_back((*itr)->GetGUID());
+        }
+
+        void CalculateDamage(Unit* victim, int32& damage, int32& /*flatMod*/, float& /*pctMod*/)
+        {
+            if (victim && std::find(_doubled.begin(), _doubled.end(), victim->GetGUID()) != _doubled.end())
+                damage *= 2;
         }
 
         void Register() override
         {
             OnObjectAreaTargetSelect.Register(&spell_morchok_stomp_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ENEMY);
+            CalcDamage.Register(&spell_morchok_stomp_SpellScript::CalculateDamage);
         }
 
     private:
@@ -470,7 +479,8 @@ public:
     SpellScript* GetSpellScript() const override { return new spell_morchok_stomp_SpellScript(); }
 };
 
-// Black Blood of the Earth: raio de dano cresce a cada tick (jogadores distantes sao poupados).
+
+// Black Blood of the Earth: raio de dano cresce a cada tick.
 class spell_morchok_black_blood_of_the_earth_dmg : public SpellScriptLoader
 {
 public:
@@ -478,8 +488,6 @@ public:
 
     class spell_morchok_black_blood_of_the_earth_dmg_SpellScript : public SpellScript
     {
-
-
         void FilterTargets(std::list<WorldObject*>& targets)
         {
             if (!GetCaster() || targets.empty())
@@ -512,7 +520,7 @@ public:
     SpellScript* GetSpellScript() const override { return new spell_morchok_black_blood_of_the_earth_dmg_SpellScript(); }
 };
 
-// Cristal Ressonante: dano dividido entre os jogadores mais proximos (3 em 10m, 7 em 25m).
+// Cristal Ressonante: dano dividido entre 3 (10m) ou 7 (25m) jogadores.
 class spell_morchok_resonating_crystal_dmg : public SpellScriptLoader
 {
 public:
@@ -520,8 +528,6 @@ public:
 
     class spell_morchok_resonating_crystal_dmg_SpellScript : public SpellScript
     {
-
-
         void FilterTargets(std::list<WorldObject*>& targets)
         {
             if (!GetCaster() || targets.empty())
@@ -553,6 +559,7 @@ public:
 
     SpellScript* GetSpellScript() const override { return new spell_morchok_resonating_crystal_dmg_SpellScript(); }
 };
+
 } // namespace DragonSoul::Morchok
 
 void AddSC_boss_morchok()
@@ -566,3 +573,4 @@ void AddSC_boss_morchok()
     RegisterSpellScript(spell_morchok_black_blood_of_the_earth_dmg);
     RegisterSpellScript(spell_morchok_resonating_crystal_dmg);
 }
+
