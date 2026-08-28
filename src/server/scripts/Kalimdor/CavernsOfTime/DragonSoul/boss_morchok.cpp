@@ -48,7 +48,8 @@ enum Spells
     SPELL_THE_EARTH_CONSUMES_YOU    = 103558,
     SPELL_SUMMON_KOHCROM            = 104161,
     SPELL_KOHCROM_VISUAL            = 103807,
-    SPELL_EARTH_SHATTERING          = 103694
+    SPELL_EARTH_SHATTERING          = 103694,
+    SPELL_STOMP_VULNERABILITY       = 0    // @TODO: +50% Physical dmg taken 10s (Heroic Stomp). Verificar Spell.dbc 4.3.4.
 };
 
 enum Events
@@ -73,7 +74,8 @@ enum MiscData
 {
     DATA_GUID_1      = 1,
     DATA_GUID_2      = 2,
-    ACTION_TWIN_LINK = 100
+    ACTION_TWIN_LINK = 100,
+    ACTION_CRYSTAL_EXPLODED = 101
 };
 
 enum MiscTimers
@@ -121,7 +123,8 @@ struct boss_morchok : public BossAI
         Talk(SAY_AGGRO);
         events.SetPhase(PHASE_NORMAL);
         events.ScheduleEvent(EVENT_STOMP, std::chrono::seconds(8), 0, PHASE_NORMAL);
-        events.ScheduleEvent(EVENT_CRUSH_ARMOR, std::chrono::seconds(5), 0, PHASE_NORMAL);
+        if (!_isHeroic) // Crush Armor: somente Normal (Heroico nao usa - ref PDF)
+            events.ScheduleEvent(EVENT_CRUSH_ARMOR, std::chrono::seconds(5), 0, PHASE_NORMAL);
         events.ScheduleEvent(EVENT_RESONATING_CRYSTAL, std::chrono::seconds(14), 0, PHASE_NORMAL);
         events.ScheduleEvent(EVENT_BERSERK, std::chrono::milliseconds(TIMER_BERSERK));
         if (instance)
@@ -162,6 +165,29 @@ struct boss_morchok : public BossAI
 
         if (_kohcrom && _kohcrom->IsAlive())
             _kohcrom->SetHealth(me->GetHealth());
+    }
+
+    void DoAction(int32 action) override
+    {
+        // Cristal Ressonante explodiu -> conta para o ciclo do Black Blood (ref PDF: apos 2 cristais).
+        if (action == ACTION_CRYSTAL_EXPLODED && events.GetPhaseMask() == PHASE_NORMAL)
+        {
+            if (++_crystalCount >= CRYSTALS_BEFORE_BLOOD)
+            {
+                _crystalCount = 0;
+                events.CancelEvent(EVENT_STOMP);
+                events.CancelEvent(EVENT_CRUSH_ARMOR);
+                events.CancelEvent(EVENT_RESONATING_CRYSTAL);
+                events.SetPhase(PHASE_BLACK_BLOOD);
+                events.ScheduleEvent(EVENT_THE_EARTH_CONSUMES_YOU, std::chrono::milliseconds(500));
+            }
+        }
+    }
+
+    void KilledUnit(Unit* victim) override
+    {
+        if (victim && victim->GetTypeId() == TYPEID_PLAYER)
+            Talk(SAY_KILL);
     }
 
     void JustDied(Unit* /*killer*/) override
@@ -226,19 +252,8 @@ struct boss_morchok : public BossAI
                     if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
                         DoCast(target, SPELL_RESONATING_CRYSTAL);
                     Talk(SAY_CRYSTAL);
-                    if (++_crystalCount >= CRYSTALS_BEFORE_BLOOD)
-                    {
-                        _crystalCount = 0;
-                        events.CancelEvent(EVENT_STOMP);
-                        events.CancelEvent(EVENT_CRUSH_ARMOR);
-                        events.CancelEvent(EVENT_RESONATING_CRYSTAL);
-                        events.SetPhase(PHASE_BLACK_BLOOD);
-                        events.ScheduleEvent(EVENT_THE_EARTH_CONSUMES_YOU, std::chrono::milliseconds(500));
-                    }
-                    else
-                    {
-                        events.ScheduleEvent(EVENT_RESONATING_CRYSTAL, std::chrono::milliseconds(TIMER_RESONATING_CRYSTAL), 0, PHASE_NORMAL);
-                    }
+                    // Gatilho do Black Blood movido para a explosao do cristal (DoAction).
+                    events.ScheduleEvent(EVENT_RESONATING_CRYSTAL, std::chrono::milliseconds(TIMER_RESONATING_CRYSTAL), 0, PHASE_NORMAL);
                     break;
 
                 case EVENT_THE_EARTH_CONSUMES_YOU:
@@ -303,7 +318,7 @@ struct npc_morchok_kohcrom : public BossAI
         events.SetPhase(PHASE_NORMAL);
         events.ScheduleEvent(EVENT_STOMP, std::chrono::seconds(12), 0, PHASE_NORMAL);
         events.ScheduleEvent(EVENT_RESONATING_CRYSTAL, std::chrono::seconds(18), 0, PHASE_NORMAL);
-        events.ScheduleEvent(EVENT_CRUSH_ARMOR, std::chrono::seconds(9), 0, PHASE_NORMAL);
+        // Kohcrom (Heroico) NAO usa Crush Armor (ref PDF).
     }
 
     void DamageTaken(Unit* /*attacker*/, uint32& damage) override
@@ -354,12 +369,7 @@ struct npc_morchok_kohcrom : public BossAI
                     events.ScheduleEvent(EVENT_STOMP, std::chrono::milliseconds(TIMER_STOMP), 0, PHASE_NORMAL);
                     break;
 
-                case EVENT_CRUSH_ARMOR:
-                    if (Unit* victim = me->GetVictim())
-                        DoCast(victim, SPELL_CRUSH_ARMOR);
-                    events.ScheduleEvent(EVENT_CRUSH_ARMOR, std::chrono::milliseconds(TIMER_CRUSH_ARMOR), 0, PHASE_NORMAL);
-                    break;
-
+                // Kohcrom (Heroico) NAO usa Crush Armor (ref PDF).
                 case EVENT_RESONATING_CRYSTAL:
                     if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
                         DoCast(target, SPELL_RESONATING_CRYSTAL);
@@ -399,6 +409,10 @@ struct npc_morchok_resonating_crystal : public ScriptedAI
         {
             _exploded = true;
             DoCastAOE(SPELL_RESONATING_CRYSTAL_DMG);
+            if (InstanceScript* inst = me->GetInstance())
+                if (Creature* boss = inst->GetCreature(DATA_MORCHOK))
+                    if (boss->IsAlive())
+                        boss->AI()->DoAction(ACTION_CRYSTAL_EXPLODED);
             me->DespawnOrUnsummon(2000);
             return;
         }
@@ -425,6 +439,10 @@ struct npc_morchok_resonating_crystal : public ScriptedAI
         {
             _exploded = true;
             DoCastAOE(SPELL_RESONATING_CRYSTAL_DMG);
+            if (InstanceScript* inst = me->GetInstance())
+                if (Creature* boss = inst->GetCreature(DATA_MORCHOK))
+                    if (boss->IsAlive())
+                        boss->AI()->DoAction(ACTION_CRYSTAL_EXPLODED);
             me->DespawnOrUnsummon(2000);
         }
     }
@@ -456,10 +474,19 @@ public:
                 damage *= 2;
         }
 
+        // Heroico: Stomp aumenta dano Fisico recebido em 50% por 10s (ref PDF).
+        void HandleOnHit(SpellEffIndex /*effIndex*/)
+        {
+            if (GetCaster()->GetMap()->IsHeroic() && SPELL_STOMP_VULNERABILITY)
+                if (Unit* hit = GetHitUnit())
+                    GetCaster()->AddAura(SPELL_STOMP_VULNERABILITY, hit);
+        }
+
         void Register() override
         {
             OnObjectAreaTargetSelect.Register(&spell_morchok_stomp_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ENEMY);
             CalcDamage.Register(&spell_morchok_stomp_SpellScript::CalculateDamage);
+            OnHit.Register(&spell_morchok_stomp_SpellScript::HandleOnHit, EFFECT_0);
         }
 
     private:
