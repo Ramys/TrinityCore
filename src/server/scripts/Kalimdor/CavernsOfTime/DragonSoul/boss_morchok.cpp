@@ -409,7 +409,7 @@ struct npc_morchok_resonating_crystal : public ScriptedAI
         {
             _exploded = true;
             DoCastAOE(SPELL_RESONATING_CRYSTAL_DMG);
-            if (InstanceScript* inst = instance)
+            if (InstanceScript* inst = me->GetInstanceScript())
                 if (Creature* boss = inst->GetCreature(DATA_MORCHOK))
                     if (boss->IsAlive())
                         boss->AI()->DoAction(ACTION_CRYSTAL_EXPLODED);
@@ -439,7 +439,7 @@ struct npc_morchok_resonating_crystal : public ScriptedAI
         {
             _exploded = true;
             DoCastAOE(SPELL_RESONATING_CRYSTAL_DMG);
-            if (InstanceScript* inst = instance)
+            if (InstanceScript* inst = me->GetInstanceScript())
                 if (Creature* boss = inst->GetCreature(DATA_MORCHOK))
                     if (boss->IsAlive())
                         boss->AI()->DoAction(ACTION_CRYSTAL_EXPLODED);
