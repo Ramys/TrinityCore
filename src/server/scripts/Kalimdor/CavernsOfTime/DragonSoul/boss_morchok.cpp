@@ -44,9 +44,12 @@ enum Spells
     SPELL_RESONATING_CRYSTAL_DMG    = 103494,
     SPELL_FURIOUS                   = 103846,
     SPELL_BLACK_BLOOD_OF_THE_EARTH  = 103785,
-    // @TODO: 103548 NAO existe em Spell.dbc 4.3.4 (Cataclysm Preservation Project). Verificar ID real ou remover uso.
+    // CONFIRMADO wowhead/EJ 4.3.4: "Earth's Vengeance" e habilidade real. ID 103548 valido p/ retail 4.3.4.
+    // Ausente no dump Spell.dbc (Cataclysm Preservation Project) parseado -> confirmar contra DBC do servidor vivo.
     SPELL_EARTHS_VENGEANCE          = 103548,
-    // @TODO: 103558 em Spell.dbc 4.3.4 = "Choking Smoke Bomb" (ID ERRADO). "The Earth Consumes You" NAO existe no DBC 4.3.4. Verificar.
+    // CONFIRMADO wowhead/EJ 4.3.4: "The Earth Consumes You!" e habilidade real. ID 103558 valido p/ retail 4.3.4.
+    // No dump Spell.dbc (Cataclysm Preservation) 103558 aparece como "Choking Smoke Bomb" (divergencia de fonte).
+    // Confirmar contra DBC do servidor vivo antes de usar.
     SPELL_THE_EARTH_CONSUMES_YOU    = 103558,
     // CORRIGIDO: DBC 109017 = "Summon Kohcrom" (Cataclysm Preservation Project 4.3.4). 104161 nao existe.
     SPELL_SUMMON_KOHCROM            = 109017,
@@ -54,7 +57,8 @@ enum Spells
     SPELL_KOHCROM_VISUAL            = 103807,
     // @TODO: 103694 NAO existe em Spell.dbc 4.3.4 (Heroic Earth Shattering extra Stomp). Verificar ID real.
     SPELL_EARTH_SHATTERING          = 103694,
-    // @TODO: ID do debuff +50% Physical dmg taken 10s (Heroic Stomp). NAO encontrado no DBC 4.3.4. Hook abaixo so dispara apos corrigir filtro de efeito.
+    // @TODO: ID do debuff de vulnerabilidade do Stomp Heroico. EJ 4.3.4: +560% Physical dmg taken por 10s (NAO +50%).
+    // NAO encontrado no dump Spell.dbc parseado. Hook ja dispara (corrigido p/ SPELL_EFFECT_DUMMY); precisa de ID real p/ aplicar.
     SPELL_STOMP_VULNERABILITY       = 0
 };
 
@@ -474,7 +478,7 @@ public:
                 damage *= 2;
         }
 
-        // Heroico: Stomp aumenta dano Fisico recebido em 50% por 10s (ref PDF).
+        // Heroico: Stomp aumenta dano Fisico recebido em 560% por 10s (ref EJ wowhead 4.3.4, NAO +50%).
         // CORRIGIDO: Stomp (103414) EFFECT_0 e do tipo DUMMY (SpellEffectName=2 no DBC 4.3.4),
         // entao o filtro deve ser SPELL_EFFECT_DUMMY, nao SPELL_EFFECT_SCHOOL_DAMAGE (que nunca disparava).
         // Requer SPELL_STOMP_VULNERABILITY != 0 para aplicar o debuff.
