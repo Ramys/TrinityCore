@@ -165,6 +165,28 @@ Diferenças confirmadas nos headers reais deste core (`src/server/game/Spells/Sp
 
 Estes pontos (1 a 6) são a causa raiz dos erros de compilação/link no port de `boss_morchok.cpp` (MoP 5.4.8 -> Cata 4.3.4).
 
+### Seção 2c: Gotchas adicionais (port `boss_morchok.cpp`, Cata 4.3.4)
+
+Validado na migração de `boss_morchok.cpp` (MoP 5.4.8 -> Cata 4.3.4). Complementa a Seção 2b:
+
+1. **EventMap — `GetPhaseMask()`, não `GetPhase()`**: Cata 4.3.4 não tem `EventMap::GetPhase()`. Usar `events.GetPhaseMask()` (retorna `uint8`) para ler a máscara, ou `events.IsInPhase(uint8 phase)` para testar fase específica. Ambos existem em `EventMap.h`.
+2. **`Map::GetPlayers()` retorna referência**: assinatura é `Map::PlayerList const& GetPlayers()`, NÃO preenche `std::list<Player*>&` out-param. Iterar o retorno:
+   ```cpp
+   Map::PlayerList const& players = me->GetMap()->GetPlayers();
+   for (Map::PlayerList::const_iterator it = players.begin(); it != players.end(); ++it)
+       if (Player* p = it->GetSource()) { /* ... */ }
+   ```
+3. **`creature_text` — coluna `CreatureID` (não `entry`)**: schema usa `CreatureID` como 1ª coluna. Insert posicional padrão do repo: `(CreatureID, GroupID, ID, Text, Type, Language, Probability, Emote, Duration, Sound, BroadcastTextId, ...)`. Usar `entry` quebra a query. `Talk(SAY_*)` usa `GroupID`+`ID` (ambos começam em 0).
+4. **IDs de spell/script Cata 4.3.4 ≠ MoP 5.4.8**: Morchok usa faixa `103xxx` (ex.: `103414`, `103687`, `103640`, `103494`, `103846`, `103785`, `103548`, `103558`, `104161`). Sempre re-verificar no `Spell.dbc` 4.3.4 (regra 3 da Seção 4). Não reaproveitar IDs do MoP.
+5. **SpellScript hook por alvo `OnHit`**: em spell com efeito em área (ex.: `spell_morchok_stomp`), usar `OnHit` + `GetHitUnit()` para lógica por alvo (ex.: debuff só em heroico). Padrão:
+   ```cpp
+   void HandleOnHit(SpellEffIndex) { Unit* target = GetHitUnit(); /* ... */ }
+   // no Register():
+   OnEffectHit += SpellEffectFn(spell_morchok_stomp::HandleOnHit, EFFECT_0, SPELL_EFFECT_*);
+   ```
+6. **Frases de kill**: override `KilledUnit(Unit* victim)` -> `Talk(SAY_KILL)` para reproduzir as falas de kill do PDF.
+7. **Exemplo `boss_ultraxion.cpp` é conceitual**: as Seções 1/4 citam `boss_ultraxion.cpp`, que NÃO existe neste fork. São apenas ilustrativos do padrão `namespace Zone::Boss { struct ... }; void AddSC_*()` fora do namespace. Usar `boss_jindo_the_godbreaker.cpp` (ZulGurub) como referência real compilável.
+
 ---
 
 ## Seção 3: Conteúdo que NÃO existe no Cataclysm
