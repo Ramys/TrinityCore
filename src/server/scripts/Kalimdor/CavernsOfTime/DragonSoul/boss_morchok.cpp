@@ -44,12 +44,18 @@ enum Spells
     SPELL_RESONATING_CRYSTAL_DMG    = 103494,
     SPELL_FURIOUS                   = 103846,
     SPELL_BLACK_BLOOD_OF_THE_EARTH  = 103785,
+    // @TODO: 103548 NAO existe em Spell.dbc 4.3.4 (Cataclysm Preservation Project). Verificar ID real ou remover uso.
     SPELL_EARTHS_VENGEANCE          = 103548,
+    // @TODO: 103558 em Spell.dbc 4.3.4 = "Choking Smoke Bomb" (ID ERRADO). "The Earth Consumes You" NAO existe no DBC 4.3.4. Verificar.
     SPELL_THE_EARTH_CONSUMES_YOU    = 103558,
-    SPELL_SUMMON_KOHCROM            = 104161,
+    // CORRIGIDO: DBC 109017 = "Summon Kohcrom" (Cataclysm Preservation Project 4.3.4). 104161 nao existe.
+    SPELL_SUMMON_KOHCROM            = 109017,
+    // @TODO: 103807 NAO existe em Spell.dbc 4.3.4. Verificar ID real do visual de Kohcrom.
     SPELL_KOHCROM_VISUAL            = 103807,
+    // @TODO: 103694 NAO existe em Spell.dbc 4.3.4 (Heroic Earth Shattering extra Stomp). Verificar ID real.
     SPELL_EARTH_SHATTERING          = 103694,
-    SPELL_STOMP_VULNERABILITY       = 0    // @TODO: +50% Physical dmg taken 10s (Heroic Stomp). Verificar Spell.dbc 4.3.4.
+    // @TODO: ID do debuff +50% Physical dmg taken 10s (Heroic Stomp). NAO encontrado no DBC 4.3.4. Hook abaixo so dispara apos corrigir filtro de efeito.
+    SPELL_STOMP_VULNERABILITY       = 0
 };
 
 enum Events
@@ -469,6 +475,9 @@ public:
         }
 
         // Heroico: Stomp aumenta dano Fisico recebido em 50% por 10s (ref PDF).
+        // CORRIGIDO: Stomp (103414) EFFECT_0 e do tipo DUMMY (SpellEffectName=2 no DBC 4.3.4),
+        // entao o filtro deve ser SPELL_EFFECT_DUMMY, nao SPELL_EFFECT_SCHOOL_DAMAGE (que nunca disparava).
+        // Requer SPELL_STOMP_VULNERABILITY != 0 para aplicar o debuff.
         void HandleOnHit(SpellEffIndex /*effIndex*/)
         {
             if (GetCaster()->GetMap()->IsHeroic() && SPELL_STOMP_VULNERABILITY)
@@ -480,7 +489,7 @@ public:
         {
             OnObjectAreaTargetSelect.Register(&spell_morchok_stomp_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ENEMY);
             CalcDamage.Register(&spell_morchok_stomp_SpellScript::CalculateDamage);
-            OnEffectHitTarget.Register(&spell_morchok_stomp_SpellScript::HandleOnHit, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
+            OnEffectHitTarget.Register(&spell_morchok_stomp_SpellScript::HandleOnHit, EFFECT_0, SPELL_EFFECT_DUMMY);
         }
 
     private:
