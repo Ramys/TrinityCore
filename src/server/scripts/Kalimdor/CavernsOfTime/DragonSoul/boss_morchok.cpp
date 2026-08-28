@@ -213,12 +213,6 @@ struct boss_morchok : public BossAI
             instance->SetBossState(DATA_MORCHOK, FAIL);
     }
 
-    void KilledUnit(Unit* victim) override
-    {
-        if (victim->GetTypeId() == TYPEID_PLAYER)
-            Talk(SAY_KILL);
-    }
-
     void UpdateAI(uint32 diff) override
     {
         if (!UpdateVictim())
@@ -409,7 +403,7 @@ struct npc_morchok_resonating_crystal : public ScriptedAI
         {
             _exploded = true;
             DoCastAOE(SPELL_RESONATING_CRYSTAL_DMG);
-            if (InstanceScript* inst = me->GetInstance())
+            if (InstanceScript* inst = instance)
                 if (Creature* boss = inst->GetCreature(DATA_MORCHOK))
                     if (boss->IsAlive())
                         boss->AI()->DoAction(ACTION_CRYSTAL_EXPLODED);
@@ -439,7 +433,7 @@ struct npc_morchok_resonating_crystal : public ScriptedAI
         {
             _exploded = true;
             DoCastAOE(SPELL_RESONATING_CRYSTAL_DMG);
-            if (InstanceScript* inst = me->GetInstance())
+            if (InstanceScript* inst = instance)
                 if (Creature* boss = inst->GetCreature(DATA_MORCHOK))
                     if (boss->IsAlive())
                         boss->AI()->DoAction(ACTION_CRYSTAL_EXPLODED);
@@ -486,7 +480,7 @@ public:
         {
             OnObjectAreaTargetSelect.Register(&spell_morchok_stomp_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ENEMY);
             CalcDamage.Register(&spell_morchok_stomp_SpellScript::CalculateDamage);
-            OnHit.Register(&spell_morchok_stomp_SpellScript::HandleOnHit, EFFECT_0);
+            OnEffectHitTarget.Register(&spell_morchok_stomp_SpellScript::HandleOnHit, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
         }
 
     private:

@@ -178,12 +178,12 @@ Validado na migração de `boss_morchok.cpp` (MoP 5.4.8 -> Cata 4.3.4). Compleme
    ```
 3. **`creature_text` — coluna `CreatureID` (não `entry`)**: schema usa `CreatureID` como 1ª coluna. Insert posicional padrão do repo: `(CreatureID, GroupID, ID, Text, Type, Language, Probability, Emote, Duration, Sound, BroadcastTextId, ...)`. Usar `entry` quebra a query. `Talk(SAY_*)` usa `GroupID`+`ID` (ambos começam em 0).
 4. **IDs de spell/script Cata 4.3.4 ≠ MoP 5.4.8**: Morchok usa faixa `103xxx` (ex.: `103414`, `103687`, `103640`, `103494`, `103846`, `103785`, `103548`, `103558`, `104161`). Sempre re-verificar no `Spell.dbc` 4.3.4 (regra 3 da Seção 4). Não reaproveitar IDs do MoP.
-5. **SpellScript hook por alvo `OnHit`**: em spell com efeito em área (ex.: `spell_morchok_stomp`), usar `OnHit` + `GetHitUnit()` para lógica por alvo (ex.: debuff só em heroico). Padrão:
-   ```cpp
-   void HandleOnHit(SpellEffIndex) { Unit* target = GetHitUnit(); /* ... */ }
-   // no Register():
-   OnEffectHit += SpellEffectFn(spell_morchok_stomp::HandleOnHit, EFFECT_0, SPELL_EFFECT_*);
-   ```
+5. **SpellScript hooks (Cata 4.3.4, `SpellScript.h`)**: NÃO usar `+= SpellEffectFn` (padrão antigo do TC). Registrar via `.Register()`:
+   - `OnEffectHitTarget` (por alvo, handler `void(SpellEffIndex)`, disponibiliza `GetHitUnit()`): `OnEffectHitTarget.Register(&Classe::Handle, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);` — usar para lógica por alvo (ex.: debuff heroico em `spell_morchok_stomp`).
+   - `OnHit` / `BeforeHit` / `AfterHit` são `HitHook` = `HookHandler<void>` → handler `void()` (SEM args). Não servem para `GetHitUnit()` nem `SpellEffIndex`.
+   - `CalcDamage` (`DamageAndHealingCalcHook`): handler `void(Unit* victim, int32& damage, int32& flatMod, float& pctMod)`; registrar `CalcDamage.Register(&Classe::CalculateDamage);`.
+   - `OnObjectAreaTargetSelect`: `OnObjectAreaTargetSelect.Register(&Classe::Filter, EFFECT_0, TARGET_UNIT_DEST_AREA_ENEMY);`.
+   - Erro comum (causou falha de compilação no port): `OnHit.Register(&Classe::Handle, EFFECT_0)` — `OnHit` handler é `void()` e `HitHook::Register` não aceita `EFFECT_0`. Use `OnEffectHitTarget` para alvo+índice.
 6. **Frases de kill**: override `KilledUnit(Unit* victim)` -> `Talk(SAY_KILL)` para reproduzir as falas de kill do PDF.
 7. **Exemplo `boss_ultraxion.cpp` é conceitual**: as Seções 1/4 citam `boss_ultraxion.cpp`, que NÃO existe neste fork. São apenas ilustrativos do padrão `namespace Zone::Boss { struct ... }; void AddSC_*()` fora do namespace. Usar `boss_jindo_the_godbreaker.cpp` (ZulGurub) como referência real compilável.
 
