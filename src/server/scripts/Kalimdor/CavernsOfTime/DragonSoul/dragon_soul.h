@@ -55,7 +55,7 @@ enum DSCreatures
 {
     // Bosses
     NPC_MORCHOK                                 = 55265,
-    NPC_KOHCROM                                 = 55274, // @TODO: VERIFICAR ENTRY NO CREATURE_TEMPLATE 4.3.4 (gemeo do Morchok, modo Heroico)
+    NPC_KOHCROM                                 = 57773, // Kohcrom (gemeo do Morchok, Heroico). Entry real confirmado em creature_template (lvl 88, rank boss).
     NPC_RESONATING_CRYSTAL                      = 55269, // @TODO: VERIFICAR ENTRY NO CREATURE_TEMPLATE 4.3.4 (cristal ressonante)
 
     BOSS_MADNESS_OF_DEATHWING                   = 56173,
