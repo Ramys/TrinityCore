@@ -452,146 +452,122 @@ struct npc_morchok_resonating_crystal : public ScriptedAI
     }
 };
 
-// Stomp: alvo atual e aliado mais proximo recebem dano dobrado.
-class spell_morchok_stomp : public SpellScriptLoader
+// Stomp: alvo atual e aliado mais proximo recebem dano dobrado. 4.3.4: SpellScript direto (sem SpellScriptLoader).
+class spell_morchok_stomp : public SpellScript
 {
-public:
-    spell_morchok_stomp() : SpellScriptLoader("spell_morchok_stomp") { }
+    std::vector<ObjectGuid> _doubled;
 
-    class spell_morchok_stomp_SpellScript : public SpellScript
+    void FilterTargets(std::list<WorldObject*>& targets)
     {
-        std::vector<ObjectGuid> _doubled;
+        if (!GetCaster() || targets.empty())
+            return;
+        targets.sort(DistanceOrderPred(GetCaster()));
+        uint8 count = 0;
+        for (auto itr = targets.begin(); itr != targets.end() && count < 2; ++itr, ++count)
+            _doubled.push_back((*itr)->GetGUID());
+    }
 
-        void FilterTargets(std::list<WorldObject*>& targets)
+    void CalculateDamage(Unit* victim, int32& damage, int32& /*flatMod*/, float& /*pctMod*/)
+    {
+        if (victim && std::find(_doubled.begin(), _doubled.end(), victim->GetGUID()) != _doubled.end())
+            damage *= 2;
+    }
+
+    // Heroico: Stomp aumenta dano Fisico recebido em 560% por 10s (ref EJ wowhead 4.3.4, NAO +50%).
+    // CORRIGIDO: Stomp (103414) EFFECT_0 e do tipo DUMMY (SpellEffectName=2 no DBC 4.3.4),
+    // entao o filtro deve ser SPELL_EFFECT_DUMMY, nao SPELL_EFFECT_SCHOOL_DAMAGE (que nunca disparava).
+    // Requer SPELL_STOMP_VULNERABILITY != 0 para aplicar o debuff.
+    void HandleOnHit(SpellEffIndex /*effIndex*/)
+    {
+        if (GetCaster()->GetMap()->IsHeroic() && SPELL_STOMP_VULNERABILITY)
+            if (Unit* hit = GetHitUnit())
+                GetCaster()->AddAura(SPELL_STOMP_VULNERABILITY, hit);
+    }
+
+    void Register() override
+    {
+        OnObjectAreaTargetSelect.Register(&spell_morchok_stomp::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ENEMY);
+        CalcDamage.Register(&spell_morchok_stomp::CalculateDamage);
+        OnEffectHitTarget.Register(&spell_morchok_stomp::HandleOnHit, EFFECT_0, SPELL_EFFECT_DUMMY);
+    }
+
+private:
+    class DistanceOrderPred
+    {
+    public:
+        DistanceOrderPred(WorldObject* searcher) : _searcher(searcher) { }
+        bool operator()(WorldObject* a, WorldObject* b) const
         {
-            if (!GetCaster() || targets.empty())
-                return;
-            targets.sort(DistanceOrderPred(GetCaster()));
-            uint8 count = 0;
-            for (auto itr = targets.begin(); itr != targets.end() && count < 2; ++itr, ++count)
-                _doubled.push_back((*itr)->GetGUID());
+            return _searcher->GetExactDist(a) < _searcher->GetExactDist(b);
         }
-
-        void CalculateDamage(Unit* victim, int32& damage, int32& /*flatMod*/, float& /*pctMod*/)
-        {
-            if (victim && std::find(_doubled.begin(), _doubled.end(), victim->GetGUID()) != _doubled.end())
-                damage *= 2;
-        }
-
-        // Heroico: Stomp aumenta dano Fisico recebido em 560% por 10s (ref EJ wowhead 4.3.4, NAO +50%).
-        // CORRIGIDO: Stomp (103414) EFFECT_0 e do tipo DUMMY (SpellEffectName=2 no DBC 4.3.4),
-        // entao o filtro deve ser SPELL_EFFECT_DUMMY, nao SPELL_EFFECT_SCHOOL_DAMAGE (que nunca disparava).
-        // Requer SPELL_STOMP_VULNERABILITY != 0 para aplicar o debuff.
-        void HandleOnHit(SpellEffIndex /*effIndex*/)
-        {
-            if (GetCaster()->GetMap()->IsHeroic() && SPELL_STOMP_VULNERABILITY)
-                if (Unit* hit = GetHitUnit())
-                    GetCaster()->AddAura(SPELL_STOMP_VULNERABILITY, hit);
-        }
-
-        void Register() override
-        {
-            OnObjectAreaTargetSelect.Register(&spell_morchok_stomp_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ENEMY);
-            CalcDamage.Register(&spell_morchok_stomp_SpellScript::CalculateDamage);
-            OnEffectHitTarget.Register(&spell_morchok_stomp_SpellScript::HandleOnHit, EFFECT_0, SPELL_EFFECT_DUMMY);
-        }
-
     private:
-        class DistanceOrderPred
-        {
-        public:
-            DistanceOrderPred(WorldObject* searcher) : _searcher(searcher) { }
-            bool operator()(WorldObject* a, WorldObject* b) const
-            {
-                return _searcher->GetExactDist(a) < _searcher->GetExactDist(b);
-            }
-        private:
-            WorldObject* _searcher;
-        };
+        WorldObject* _searcher;
     };
-
-    SpellScript* GetSpellScript() const override { return new spell_morchok_stomp_SpellScript(); }
 };
 
 
-// Black Blood of the Earth: raio de dano cresce a cada tick.
-class spell_morchok_black_blood_of_the_earth_dmg : public SpellScriptLoader
+// Black Blood of the Earth: raio de dano cresce a cada tick. 4.3.4: SpellScript direto.
+class spell_morchok_black_blood_of_the_earth_dmg : public SpellScript
 {
-public:
-    spell_morchok_black_blood_of_the_earth_dmg() : SpellScriptLoader("spell_morchok_black_blood_of_the_earth_dmg") { }
-
-    class spell_morchok_black_blood_of_the_earth_dmg_SpellScript : public SpellScript
+    void FilterTargets(std::list<WorldObject*>& targets)
     {
-        void FilterTargets(std::list<WorldObject*>& targets)
+        if (!GetCaster() || targets.empty())
+            return;
+        if (AuraEffect const* aurEff = GetCaster()->GetAuraEffect(SPELL_BLACK_BLOOD_OF_THE_EARTH, EFFECT_0))
         {
-            if (!GetCaster() || targets.empty())
-                return;
-            if (AuraEffect const* aurEff = GetCaster()->GetAuraEffect(SPELL_BLACK_BLOOD_OF_THE_EARTH, EFFECT_0))
-            {
-                uint32 ticks = aurEff->GetTickNumber() + 1;
-                targets.remove_if(DistanceCheck(GetCaster(), float(ticks * 4)));
-            }
+            uint32 ticks = aurEff->GetTickNumber() + 1;
+            targets.remove_if(DistanceCheck(GetCaster(), float(ticks * 4)));
         }
+    }
 
-        void Register() override
-        {
-            OnObjectAreaTargetSelect.Register(&spell_morchok_black_blood_of_the_earth_dmg_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ENEMY);
-            OnObjectAreaTargetSelect.Register(&spell_morchok_black_blood_of_the_earth_dmg_SpellScript::FilterTargets, EFFECT_1, TARGET_UNIT_DEST_AREA_ENEMY);
-        }
+    void Register() override
+    {
+        OnObjectAreaTargetSelect.Register(&spell_morchok_black_blood_of_the_earth_dmg::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ENEMY);
+        OnObjectAreaTargetSelect.Register(&spell_morchok_black_blood_of_the_earth_dmg::FilterTargets, EFFECT_1, TARGET_UNIT_DEST_AREA_ENEMY);
+    }
 
+private:
+    class DistanceCheck
+    {
+    public:
+        DistanceCheck(Unit* searcher, float distance) : _searcher(searcher), _distance(distance) { }
+        bool operator()(WorldObject* unit) const { return _searcher->GetDistance2d(unit) > _distance; }
     private:
-        class DistanceCheck
-        {
-        public:
-            DistanceCheck(Unit* searcher, float distance) : _searcher(searcher), _distance(distance) { }
-            bool operator()(WorldObject* unit) const { return _searcher->GetDistance2d(unit) > _distance; }
-        private:
-            Unit* _searcher;
-            float _distance;
-        };
+        Unit* _searcher;
+        float _distance;
     };
-
-    SpellScript* GetSpellScript() const override { return new spell_morchok_black_blood_of_the_earth_dmg_SpellScript(); }
 };
 
-// Cristal Ressonante: dano dividido entre 3 (10m) ou 7 (25m) jogadores.
-class spell_morchok_resonating_crystal_dmg : public SpellScriptLoader
+// Cristal Ressonante: dano dividido entre 3 (10m) ou 7 (25m) jogadores. 4.3.4: SpellScript direto.
+class spell_morchok_resonating_crystal_dmg : public SpellScript
 {
-public:
-    spell_morchok_resonating_crystal_dmg() : SpellScriptLoader("spell_morchok_resonating_crystal_dmg") { }
-
-    class spell_morchok_resonating_crystal_dmg_SpellScript : public SpellScript
+    void FilterTargets(std::list<WorldObject*>& targets)
     {
-        void FilterTargets(std::list<WorldObject*>& targets)
-        {
-            if (!GetCaster() || targets.empty())
-                return;
-            uint32 maxTargets = GetCaster()->GetMap()->Is25ManRaid() ? 7 : 3;
-            targets.sort(DistanceOrderPred(GetCaster()));
-            if (targets.size() > maxTargets)
-                targets.resize(maxTargets);
-        }
+        if (!GetCaster() || targets.empty())
+            return;
+        uint32 maxTargets = GetCaster()->GetMap()->Is25ManRaid() ? 7 : 3;
+        targets.sort(DistanceOrderPred(GetCaster()));
+        if (targets.size() > maxTargets)
+            targets.resize(maxTargets);
+    }
 
-        void Register() override
-        {
-            OnObjectAreaTargetSelect.Register(&spell_morchok_resonating_crystal_dmg_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ENEMY);
-        }
+    void Register() override
+    {
+        OnObjectAreaTargetSelect.Register(&spell_morchok_resonating_crystal_dmg::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ENEMY);
+    }
 
+private:
+    class DistanceOrderPred
+    {
+    public:
+        DistanceOrderPred(WorldObject* searcher) : _searcher(searcher) { }
+        bool operator()(WorldObject* a, WorldObject* b) const
+        {
+            return _searcher->GetExactDist(a) < _searcher->GetExactDist(b);
+        }
     private:
-        class DistanceOrderPred
-        {
-        public:
-            DistanceOrderPred(WorldObject* searcher) : _searcher(searcher) { }
-            bool operator()(WorldObject* a, WorldObject* b) const
-            {
-                return _searcher->GetExactDist(a) < _searcher->GetExactDist(b);
-            }
-        private:
-            WorldObject* _searcher;
-        };
+        WorldObject* _searcher;
     };
-
-    SpellScript* GetSpellScript() const override { return new spell_morchok_resonating_crystal_dmg_SpellScript(); }
 };
 
 } // namespace DragonSoul::Morchok
