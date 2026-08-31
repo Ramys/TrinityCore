@@ -173,8 +173,14 @@ struct boss_morchok : public BossAI
         if (!me->HasAura(SPELL_FURIOUS) && me->HealthBelowPctDamaged(20, damage))
             DoCastSelf(SPELL_FURIOUS);
 
+        // Shared health Heroico: espelha dano de Morchok -> Kohcrom sem underflow e sem desync.
+        // Se letal, deixa 1 HP e deixa o core matar Morchok; JustDied mata Kohcrom.
         if (_kohcrom && _kohcrom->IsAlive())
-            _kohcrom->SetHealth(me->GetHealth());
+        {
+            uint32 cur = me->GetHealth();
+            uint32 newHealth = (damage < cur) ? (cur - damage) : 1;
+            _kohcrom->SetHealth(newHealth);
+        }
     }
 
     void DoAction(int32 action) override
