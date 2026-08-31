@@ -336,10 +336,15 @@ struct npc_morchok_kohcrom : public BossAI
         if (!me->IsAlive())
             return;
 
+        // Vida compartilhada Heroico: espelha dano de Kohcrom -> Morchok sem underflow e sem dano duplo.
+        // Usa vida de Kohcrom (me) como base, não a do twin, para evitar dessync quando vidas divergem.
+        // Se letal, deixa twin com 1 HP e deixa o core matar Kohcrom; JustDied mata o twin.
         if (_twin && _twin->IsAlive())
         {
-            _twin->SetHealth(_twin->GetHealth() - damage);
-            me->SetHealth(_twin->GetHealth());
+            uint32 cur = me->GetHealth();
+            uint32 newHealth = (damage < cur) ? (cur - damage) : 1;
+            _twin->SetHealth(newHealth);
+            // Não tocar em me->SetHealth aqui: core ainda vai aplicar `damage` em Kohcrom. Se setássemos me também, seria dano duplo.
         }
 
         if (!me->HasAura(SPELL_FURIOUS) && me->HealthBelowPctDamaged(20, damage))
