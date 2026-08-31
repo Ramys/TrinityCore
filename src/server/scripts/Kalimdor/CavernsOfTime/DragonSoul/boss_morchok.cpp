@@ -267,6 +267,7 @@ struct boss_morchok : public BossAI
                     break;
 
                 case EVENT_THE_EARTH_CONSUMES_YOU:
+                    Talk(SAY_GROUND1);
                     DoCastAOE(SPELL_THE_EARTH_CONSUMES_YOU);
                     events.ScheduleEvent(EVENT_EARTHS_VENGEANCE, std::chrono::milliseconds(TIMER_CONSUME));
                     break;
@@ -277,6 +278,7 @@ struct boss_morchok : public BossAI
                     break;
 
                 case EVENT_BLACK_BLOOD:
+                    Talk(SAY_GROUND2);
                     DoCastSelf(SPELL_BLACK_BLOOD_OF_THE_EARTH);
                     events.ScheduleEvent(EVENT_BLACK_BLOOD_END, std::chrono::milliseconds(TIMER_BLACK_BLOOD));
                     break;
@@ -406,12 +408,16 @@ struct npc_morchok_resonating_crystal : public ScriptedAI
 
     bool _exploded;
     uint32 _timer;
-    ObjectGuid _target;
 
     void IsSummonedBy(Unit* /*summoner*/) override
     {
-        if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
-            _target = target->GetGUID();
+        // Cristal Ressonante: 103640 invoca 55269 no chao. Retail 4.3.4: cristal fica parado 12s e explode (103494).
+        // Nao deve perseguir jogador nem explodir ao tocar - corrige sumico rapido.
+        me->SetReactState(REACT_PASSIVE);
+        me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_DISABLE_MOVE);
+        me->GetMotionMaster()->Clear();
+        me->GetMotionMaster()->MoveIdle();
+        // Garante display/aura visual se DBC nao aplicar automaticamente
     }
 
     void UpdateAI(uint32 diff) override
@@ -419,8 +425,8 @@ struct npc_morchok_resonating_crystal : public ScriptedAI
         if (_exploded)
             return;
 
-        _timer -= diff;
-        if (_timer <= 0)
+        // Timer 12s fixo - corrige underflow uint32 (_timer -= diff; if <=0) e explosao prematura por proximidade.
+        if (_timer <= diff)
         {
             _exploded = true;
             DoCastAOE(SPELL_RESONATING_CRYSTAL_DMG);
@@ -431,35 +437,10 @@ struct npc_morchok_resonating_crystal : public ScriptedAI
             me->DespawnOrUnsummon(2000);
             return;
         }
-
-        Unit* target = ObjectAccessor::GetUnit(*me, _target);
-        if (!target)
-        {
-            if (Unit* t = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
-                _target = t->GetGUID();
-            else
-            {
-                _exploded = true;
-                me->DespawnOrUnsummon();
-                return;
-            }
-            target = ObjectAccessor::GetUnit(*me, _target);
-            if (!target)
-                return;
-        }
-
-        if (me->GetDistance(target) > 3.0f)
-            me->GetMotionMaster()->MovePoint(0, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ());
         else
-        {
-            _exploded = true;
-            DoCastAOE(SPELL_RESONATING_CRYSTAL_DMG);
-            if (InstanceScript* inst = me->GetInstanceScript())
-                if (Creature* boss = inst->GetCreature(DATA_MORCHOK))
-                    if (boss->IsAlive())
-                        boss->AI()->DoAction(ACTION_CRYSTAL_EXPLODED);
-            me->DespawnOrUnsummon(2000);
-        }
+            _timer -= diff;
+
+        // Permanece no local de invocacao ate explodir - sem chase. Retail: cristal nao segue target.
     }
 };
 
