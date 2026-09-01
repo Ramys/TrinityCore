@@ -58,6 +58,8 @@ enum DSCreatures
     NPC_MORCHOK                                 = 55265,
     NPC_KOHCROM                                 = 57773, // Kohcrom (gemeo do Morchok, Heroico). Entry real confirmado em creature_template (lvl 88, rank boss).
     NPC_RESONATING_CRYSTAL                      = 55346, // Resonating Crystal (cristal invocado pelo 103640). Entry confirmado em creature_template (lvl 88).
+    NPC_WARLORD_ZONOZZ                          = 55308, // Warlord Zon'ozz - 2o boss DS, gateado por Morchok DONE
+    NPC_YORSAHJ_THE_UNSLEEPING                  = 55312, // Yor'sahj the Unsleeping - 3o boss DS, gateado por Zon'ozz DONE
 
     BOSS_MADNESS_OF_DEATHWING                   = 56173,
 

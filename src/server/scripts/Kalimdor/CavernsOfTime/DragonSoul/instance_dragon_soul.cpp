@@ -26,6 +26,8 @@ ObjectData const creatureData[] =
 {
     { NPC_MORCHOK,                          DATA_MORCHOK                            },
     { NPC_KOHCROM,                          DATA_KOHCROM                            },
+    { NPC_WARLORD_ZONOZZ,                   DATA_WARLORD_ZONOZZ                     },
+    { NPC_YORSAHJ_THE_UNSLEEPING,           DATA_YORSAHJ_THE_UNSLEEPING             },
     { BOSS_MADNESS_OF_DEATHWING,            DATA_MADNESS_OF_DEATHWING               },
     { NPC_DEATHWING_MADNESS_OF_DEATHWING,   DATA_DEATHWING_MADNESS_OF_DEATHWING     },
     { NPC_THRALL_MADNESS_OF_DEATHWING,      DATA_THRALL_MADNESS_OF_DEATHWING        },
@@ -70,6 +72,8 @@ public:
             {
                 case NPC_MORCHOK:
                 case NPC_KOHCROM:
+                case NPC_WARLORD_ZONOZZ:
+                case NPC_YORSAHJ_THE_UNSLEEPING:
                 case NPC_YSERA_MADNESS_OF_DEATHWING:
                 case NPC_ALEXSTRASZA_MADNESS_OF_DEATHWING:
                 case NPC_NOZDORMU_MADNESS_OF_DEATHWING:
