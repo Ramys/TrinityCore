@@ -157,7 +157,7 @@ struct boss_morchok : public BossAI
         if (!_isHeroic)
             events.ScheduleEvent(EVENT_CRUSH_ARMOR, 6s, 0, PHASE_NORMAL);
         events.ScheduleEvent(EVENT_RESONATING_CRYSTAL, 14s, 0, PHASE_NORMAL);
-        events.ScheduleEvent(EVENT_BERSERK, 7min);
+        events.ScheduleEvent(EVENT_BERSERK, 420000);
         _stompGuid1 = ObjectGuid::Empty;
         _stompGuid2 = ObjectGuid::Empty;
     }
