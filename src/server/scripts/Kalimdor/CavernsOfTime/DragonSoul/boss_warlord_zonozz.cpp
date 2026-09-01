@@ -390,3 +390,201 @@ private:
         for (uint8 i = 12; i < 12 + maxClaws; ++i) me->SummonCreature(NPC_CLAW_OF_GORATH, tentaclePos[i], TEMPSUMMON_CORPSE_TIMED_DESPAWN, 3000);
     }
 };
+
+// =====================================================================
+//  NPC: Void of the Unmaking (ping-pong orb)
+// =====================================================================
+struct npc_warlord_zonozz_void_of_the_unmaking : public ScriptedAI
+{
+    npc_warlord_zonozz_void_of_the_unmaking(Creature* c) : ScriptedAI(c), _bAura(false), _bExplode(false)
+    {
+        c->SetReactState(REACT_PASSIVE);
+        c->SetCanFly(true);
+        c->SetDisableGravity(true);
+        SetCombatMovement(false);
+    }
+    EventMap _events;
+    bool _bAura;
+    bool _bExplode;
+    void IsSummonedBy(Unit*) override
+    {
+        if (SPELL_VOID_IMMUNITY) me->CastSpell(me, SPELL_VOID_IMMUNITY, true);
+        me->SetSpeed(MOVE_RUN, 0.6f, true);
+        me->SetSpeed(MOVE_WALK, 0.6f, true);
+        me->SetSpeed(MOVE_FLIGHT, 0.6f, true);
+        _events.ScheduleEvent(EVENT_CHECK_DISTANCE, 5s);
+        _events.ScheduleEvent(EVENT_CONTINUE, 5s);
+    }
+    void DamageTaken(Unit*, uint32& d) override { d = 0; }
+    void UpdateAI(uint32 diff) override
+    {
+        if (_bExplode) return;
+        if (!UpdateVictim()) { if (!me->IsInCombat()) return; }
+        if (centerPos.GetExactDist2d(me->GetPositionX(), me->GetPositionY()) > 95.0f)
+        {
+            _bExplode = true; _events.Reset(); me->StopMoving();
+            if (SPELL_BLACK_BLOOD_ERUPTION) DoCastAOE(SPELL_BLACK_BLOOD_ERUPTION);
+            else if (SPELL_BLACK_BLOOD_ERUPTION_DMG) DoCastAOE(SPELL_BLACK_BLOOD_ERUPTION_DMG);
+            me->DespawnOrUnsummon(5000);
+            return;
+        }
+        _events.Update(diff);
+        while (uint32 e = _events.ExecuteEvent())
+        {
+            switch (e)
+            {
+                case EVENT_CONTINUE:
+                    if (SPELL_VOID_OF_THE_UNMAKING_VIS) DoCastSelf(SPELL_VOID_OF_THE_UNMAKING_VIS, true);
+                    _bAura = true;
+                    _MovePosition(200.0f, me->GetOrientation());
+                    break;
+                case EVENT_CHECK_DISTANCE:
+                {
+                    if (!_bAura) { _events.ScheduleEvent(EVENT_CHECK_DISTANCE, 500ms); break; }
+                    if (Player* pl = me->FindNearestPlayer(5.0f))
+                    {
+                        if (Aura const* a = me->GetAura(SPELL_VOID_DIFFUSION_ORB_BUFF))
+                            if (a->GetStackAmount() >= 9)
+                                if (InstanceScript* inst = me->GetInstanceScript())
+                                    if (Creature* z = ObjectAccessor::GetCreature(*me, inst->GetGuidData(DATA_WARLORD_ZONOZZ)))
+                                        z->AI()->SetData(DATA_ACHIEVE, 1);
+                        me->RemoveAurasDueToSpell(SPELL_VOID_OF_THE_UNMAKING_VIS); _bAura = false;
+                        if (SPELL_VOID_DIFFUSION_DMG) DoCastAOE(SPELL_VOID_DIFFUSION_DMG);
+                        // CORE FIX: add Void Diffusion Buff stack on each bounce (+20% dmg/size)
+                        if (Aura* buff = me->GetAura(SPELL_VOID_DIFFUSION_ORB_BUFF))
+                            buff->ModStackAmount(1);
+                        else
+                            DoCastSelf(SPELL_VOID_DIFFUSION_ORB_BUFF, true);
+                        me->StopMoving();
+                        float ang = me->GetAngle(pl->GetPositionX(), pl->GetPositionY());
+                        if (me->NormalizeOrientation(me->GetOrientation() - ang) < (M_PI / 4.0f))
+                            ang = me->GetOrientation();
+                        _MovePosition(200.0f, ang + float(M_PI));
+                        _events.ScheduleEvent(EVENT_UPDATE_AURA, 4s);
+                        _events.ScheduleEvent(EVENT_CHECK_DISTANCE, 4s);
+                    }
+                    else if (Creature* z = me->FindNearestCreature(NPC_ZONOZZ, 5.0f))
+                    {
+                        uint8 st = 1;
+                        if (Aura const* a = me->GetAura(SPELL_VOID_DIFFUSION_ORB_BUFF))
+                            st = a->GetStackAmount();
+                        z->AI()->SetData(DATA_VOID, st);
+                        _events.Reset(); me->StopMoving(); me->DespawnOrUnsummon(2000);
+                    }
+                    else _events.ScheduleEvent(EVENT_CHECK_DISTANCE, 200ms);
+                    break;
+                }
+                case EVENT_UPDATE_AURA:
+                    if (SPELL_VOID_OF_THE_UNMAKING_VIS) DoCastSelf(SPELL_VOID_OF_THE_UNMAKING_VIS, true);
+                    _bAura = true;
+                    break;
+                default: break;
+            }
+        }
+    }
+private:
+    void _MovePosition(float dist, float angle)
+    {
+        angle = me->NormalizeOrientation(angle);
+        float cur = 5.0f;
+        Movement::MoveSplineInit init(me);
+        bool done = false;
+        while (!done)
+        {
+            float x = me->GetPositionX() + (cur * std::cos(angle));
+            float y = me->GetPositionY() + (cur * std::sin(angle));
+            float z = me->GetPositionZ();
+            float cd = centerPos.GetExactDist2d(x, y);
+            if (cd > 100.0f || cur > dist) done = true;
+            else { G3D::Vector3 pt; pt.x = x; pt.y = y; if (cd > 40.0f) z = -225.0f + ((cd - 40.0f) * 0.1333f); else z = -225.0f; pt.z = z; init.Path().push_back(pt); cur += 5.0f; }
+        }
+        if (!init.Path().empty()) { init.SetWalk(false); init.Launch(); }
+    }
+};
+
+// =====================================================================
+//  NPC: Go'rath Tentacles (Eye / Flail / Claw)
+// =====================================================================
+struct npc_warlord_zonozz_tentacle : public ScriptedAI
+{
+    npc_warlord_zonozz_tentacle(Creature* c) : ScriptedAI(c)
+    {
+        c->ApplySpellImmune(0, IMMUNITY_EFFECT, SPELL_EFFECT_KNOCK_BACK, true);
+        c->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_GRIP, true);
+        c->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_STUN, true);
+        c->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_FEAR, true);
+        c->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_ROOT, true);
+        c->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_FREEZE, true);
+        c->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_POLYMORPH, true);
+        c->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_HORROR, true);
+        c->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_SAPPED, true);
+        c->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_CHARM, true);
+        c->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_DISORIENTED, true);
+        SetCombatMovement(false);
+    }
+    EventMap _events;
+    void Reset() override { _events.Reset(); }
+    void JustEngagedWith(Unit*) override
+    {
+        switch (me->GetEntry())
+        {
+            case NPC_FLAIL_OF_GORATH: _events.ScheduleEvent(EVENT_SLUDGE_SPEW, 10s); _events.ScheduleEvent(EVENT_WILD_FLAIL, 15s); break;
+            case NPC_CLAW_OF_GORATH: _events.ScheduleEvent(EVENT_OOZE_SPIT, 8s); break;
+            case NPC_EYE_OF_GORATH: _events.ScheduleEvent(EVENT_SHADOW_GAZE, 3s); break;
+            default: break;
+        }
+    }
+    void UpdateAI(uint32 diff) override
+    {
+        if (!UpdateVictim()) return;
+        _events.Update(diff);
+        while (uint32 e = _events.ExecuteEvent())
+        {
+            switch (e)
+            {
+                case EVENT_SLUDGE_SPEW: if (Unit* t = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true)) DoCast(t, SPELL_SLUDGE_SPEW); _events.ScheduleEvent(EVENT_SLUDGE_SPEW, 12s); break;
+                case EVENT_WILD_FLAIL: DoCastAOE(SPELL_WILD_FLAIL); _events.ScheduleEvent(EVENT_WILD_FLAIL, 7s); break;
+                case EVENT_OOZE_SPIT: if (!me->IsWithinMeleeRange(me->GetVictim())) if (Unit* t = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true)) DoCast(t, SPELL_OOZE_SPIT); _events.ScheduleEvent(EVENT_OOZE_SPIT, 6s); break;
+                case EVENT_SHADOW_GAZE: if (Unit* t = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true, -int32(SPELL_SHADOW_GAZE))) DoCast(t, SPELL_SHADOW_GAZE); _events.ScheduleEvent(EVENT_SHADOW_GAZE, 8s); break;
+                default: break;
+            }
+        }
+        if (me->GetEntry() != NPC_EYE_OF_GORATH) DoMeleeAttackIfReady();
+    }
+};
+
+// =====================================================================
+//  SPELL: Disrupting Shadows - remove by enemy spell triggers explosion
+// =====================================================================
+struct spell_warlord_zonozz_disrupting_shadows : public AuraScript
+{
+    void OnRemove(AuraEffect const*, AuraEffectHandleModes)
+    {
+        if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::ByEnemySpell))
+            if (Unit* t = GetTarget()) t->CastSpell(t, SPELL_DISRUPTING_SHADOWS_DMG, true);
+    }
+    void Register() override { AfterEffectRemove.Register(&spell_warlord_zonozz_disrupting_shadows::OnRemove, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE, AURA_EFFECT_HANDLE_REAL); }
+};
+
+// =====================================================================
+//  SPELL: Whisper - filter players only
+// =====================================================================
+struct spell_warlord_zonozz_whisper : public SpellScript
+{
+    void SelectTargets(std::list<WorldObject*>& targets) { targets.remove_if([](WorldObject* t) { return t->GetTypeId() != TYPEID_PLAYER; }); }
+    void Register() override { OnObjectAreaTargetSelect.Register(&spell_warlord_zonozz_whisper::SelectTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY); }
+};
+
+} // namespace DragonSoul::Zonozz
+
+using namespace DragonSoul::Zonozz;
+
+void AddSC_boss_warlord_zonozz()
+{
+    using namespace DragonSoul;
+    RegisterDragonSoulCreatureAI(boss_warlord_zonozz);
+    RegisterCreatureAI(npc_warlord_zonozz_void_of_the_unmaking);
+    RegisterCreatureAI(npc_warlord_zonozz_tentacle);
+    RegisterSpellScript(spell_warlord_zonozz_disrupting_shadows);
+    RegisterSpellScript(spell_warlord_zonozz_whisper);
+}
