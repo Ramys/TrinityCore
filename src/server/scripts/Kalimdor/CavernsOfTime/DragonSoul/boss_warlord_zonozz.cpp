@@ -168,7 +168,7 @@ struct boss_warlord_zonozz : public BossAI
         me->SetReactState(REACT_AGGRESSIVE);
         _phaseCount = 0;
         if (auto* m = me->GetMap())
-            m->SetWorldState(WORLDSTATE_PING_PONG_CHAMPION, 0);
+            m->SetWorldStateValue(WORLDSTATE_PING_PONG_CHAMPION, 0, false);
         if (instance)
         {
             auto const& pl = me->GetMap()->GetPlayers();
@@ -198,7 +198,7 @@ struct boss_warlord_zonozz : public BossAI
     {
         if (instance && instance->GetBossState(DATA_MORCHOK) != DONE)
         {
-            EnterEvadeMode();
+            EnterEvadeMode(EVADE_REASON_OTHER);
             auto const& pl = me->GetMap()->GetPlayers();
             for (auto const& r : pl)
                 if (Player* p = r.GetSource())
@@ -212,14 +212,14 @@ struct boss_warlord_zonozz : public BossAI
         if (instance)
             instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
         if (auto* m = me->GetMap())
-            m->SetWorldState(WORLDSTATE_PING_PONG_CHAMPION, 0);
+            m->SetWorldStateValue(WORLDSTATE_PING_PONG_CHAMPION, 0, false);
 
         _phaseCount = 0;
         me->SetReactState(REACT_AGGRESSIVE);
         Talk(SAY_AGGRO);
         DoCastAOE(SPELL_ZONOZZ_WHISPER_AGGRO, true);
 
-        events.ScheduleEvent(EVENT_BERSERK, 6min);
+        events.ScheduleEvent(EVENT_BERSERK, 360000);
         events.ScheduleEvent(EVENT_FOCUSED_ANGER, 10s);
         events.ScheduleEvent(EVENT_PSYCHIC_DRAIN, 13s);
         events.ScheduleEvent(EVENT_DISRUPTING_SHADOWS, 25s);
@@ -242,7 +242,7 @@ struct boss_warlord_zonozz : public BossAI
         GetCreatureListWithEntryInGrid(trash, me, NPC_CLAW_OF_GORATH, 150.0f);
         for (Creature* t : trash)
             if (t && t->IsAlive())
-                t->SetInCombatWithZone();
+                if (t->AI()) t->AI()->DoZoneInCombat();
     }
 
     void JustDied(Unit*) override
@@ -321,11 +321,11 @@ struct boss_warlord_zonozz : public BossAI
     {
         if (t == DATA_ACHIEVE)
         {
-            if (auto* m = me->GetMap()) m->SetWorldState(WORLDSTATE_PING_PONG_CHAMPION, 1);
+            if (auto* m = me->GetMap()) m->SetWorldStateValue(WORLDSTATE_PING_PONG_CHAMPION, 1, false);
         }
         else if (t == DATA_VOID)
         {
-            me->CastCustomSpell(SPELL_VOID_DIFFUSION_DEBUFF, SPELLVALUE_AURA_STACK, int32(d), me, true);
+            me->SetAuraStack(SPELL_VOID_DIFFUSION_DEBUFF, me, d);
             if (me->GetMap()->IsHeroic()) DoCastSelf(SPELL_VOID_OF_THE_UNMAKING_PREV, true);
             me->RemoveAurasDueToSpell(SPELL_FOCUSED_ANGER);
             events.CancelEvent(EVENT_FOCUSED_ANGER);
@@ -411,9 +411,9 @@ struct npc_warlord_zonozz_void_of_the_unmaking : public ScriptedAI
     void IsSummonedBy(Unit*) override
     {
         if (SPELL_VOID_IMMUNITY) me->CastSpell(me, SPELL_VOID_IMMUNITY, true);
-        me->SetSpeed(MOVE_RUN, 0.6f, true);
-        me->SetSpeed(MOVE_WALK, 0.6f, true);
-        me->SetSpeed(MOVE_FLIGHT, 0.6f, true);
+        me->SetSpeed(MOVE_RUN, 0.6f);
+        me->SetSpeed(MOVE_WALK, 0.6f);
+        me->SetSpeed(MOVE_FLIGHT, 0.6f);
         _events.ScheduleEvent(EVENT_CHECK_DISTANCE, 5s);
         _events.ScheduleEvent(EVENT_CONTINUE, 5s);
     }
@@ -443,7 +443,17 @@ struct npc_warlord_zonozz_void_of_the_unmaking : public ScriptedAI
                 case EVENT_CHECK_DISTANCE:
                 {
                     if (!_bAura) { _events.ScheduleEvent(EVENT_CHECK_DISTANCE, 500ms); break; }
-                    if (Player* pl = me->FindNearestPlayer(5.0f))
+                    Player* pl = nullptr;
+                    {
+                        std::list<Player*> _nearPlayers;
+                        me->GetPlayerListInGrid(_nearPlayers, 5.0f);
+                        if (!_nearPlayers.empty())
+                        {
+                            _nearPlayers.sort(Trinity::ObjectDistanceOrderPred(me));
+                            pl = _nearPlayers.front();
+                        }
+                    }
+                    if (pl)
                     {
                         if (Aura const* a = me->GetAura(SPELL_VOID_DIFFUSION_ORB_BUFF))
                             if (a->GetStackAmount() >= 9)
