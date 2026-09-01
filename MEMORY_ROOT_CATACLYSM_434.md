@@ -186,6 +186,15 @@ Validado na migração de `boss_morchok.cpp` (MoP 5.4.8 -> Cata 4.3.4). Compleme
    - Erro comum (causou falha de compilação no port): `OnHit.Register(&Classe::Handle, EFFECT_0)` — `OnHit` handler é `void()` e `HitHook::Register` não aceita `EFFECT_0`. Use `OnEffectHitTarget` para alvo+índice.
 6. **Frases de kill**: override `KilledUnit(Unit* victim)` -> `Talk(SAY_KILL)` para reproduzir as falas de kill do PDF.
 7. **Exemplo `boss_ultraxion.cpp` é conceitual**: as Seções 1/4 citam `boss_ultraxion.cpp`, que NÃO existe neste fork. São apenas ilustrativos do padrão `namespace Zone::Boss { struct ... }; void AddSC_*()` fora do namespace. Usar `boss_jindo_the_godbreaker.cpp` (ZulGurub) como referência real compilável.
+8. **World States em Maps**: `Map::SetWorldStateValue(uint32 variable, int32 value, bool hidden = false)` (em MoP era `Map::SetWorldState(variable, value)`).
+9. **`CreatureAI::EvadeReason`**: Em Cata 4.3.4, `EnterEvadeMode(EvadeReason why)` requer argumento explícito (ex: `EnterEvadeMode(EVADE_REASON_OTHER)`). O enum usa `EVADE_REASON_SEQUENCE_BREAK` (e não `EVADE_REASON_SEQUENCE`).
+10. **`SelectTarget` com Aura**: A assinatura completa é `SelectTarget(SelectAggroTarget targetType, uint32 offset = 0, float dist = 0.0f, bool playerOnly = false, bool withTank = true, int32 aura = 0)`. Nunca passar `aura` como 5º argumento, pois ele converte `int32 -> bool` para `withTank`. Sempre passe `withTank` explicitamente se passar `aura`.
+11. **`FindNearestPlayer`**: Não existe em `Unit`/`Creature` no Cata 4.3.4. Buscar jogadores via `GetPlayerListInGrid(players, dist)` e ordenar com `players.sort(Trinity::ObjectDistanceOrderPred(me))` ou iterar com predicates.
+12. **`UNIT_FLAG_DISABLE_MOVE`**: Flag exclusiva de MoP (5.x). Em Cata 4.3.4, imobilização de script é feita com `UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_NON_ATTACKABLE`, `SetReactState(REACT_PASSIVE)` ou MotionMaster.
+13. **`Unit::SetSpeed`**: Aceita 2 argumentos `(UnitMoveType type, float rate)`, sem o 3º booleano `forced` de MoP.
+14. **`Creature::SetInCombatWithZone`**: Não existe em `Creature`. Chamar `if (c->AI()) c->AI()->DoZoneInCombat()`.
+15. **`UnitAI::SetGUID`**: Assinatura em Cata 4.3.4 é `void SetGUID(ObjectGuid const& guid, int32 type) override` (requer `ObjectGuid const&`, não `uint64` ou tipo sem const ref).
+16. **Literais Chrono em Expressões Aritméticas**: Evitar misturar chrono literals com funções randômicas (`12s + urand(...)`) para evitar falhas de dedução de template do MSVC; usar inteiros milissegundos explícitos (`12000 + urand(...)`).
 
 ---
 
