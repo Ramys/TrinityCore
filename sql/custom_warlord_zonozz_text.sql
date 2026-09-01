@@ -28,9 +28,10 @@ INSERT INTO `creature_text` (`CreatureID`, `GroupID`, `ID`, `Text`, `Type`, `Lan
 (55308, 3, 5, 'From its BLEAKEST DEPTHS, we RECLAIM this world!', 14, 0, 16.6, 0, 0, 0, 0, 0, 0, 'Zonozz - Kill 3'),
 -- Death (SAY_DEATH=1) - JustDied
 (55308, 1, 0, 'Ez, Shuul''wah! Sk''woth''gl yu''gaz yog''ghyl ilfah!', 14, 0, 50, 0, 0, 0, 0, 0, 0, 'Zonozz - Death ShathYar'),
-(55308, 1, 1, 'O, Deathwing! Your faithful servant has failed you!', 14, 0, 50, 0, 0, 0, 0, 0, 0, 'Zonozz - Death'),
+(55308, 1, 1, 'O, Deathwing! Your faithful servant has failed you!', 14, 0, 50, 0, 0, 0, 0, 0, 0, 'Zonozz - Death');
+
 -- Shadows (SAY_SHADOWS=4) e Void (SAY_VOID=6) - sem fala retail confirmada no seu dump
 -- Se quiser mudo, nao inserir. Exemplo placeholder comentado:
--- (55308, 4, 0, '...', 14, 0, 100, 0, 0, 0, 0, 0, 'Zonozz - Shadows'),
--- (55308, 6, 0, '...', 14, 0, 100, 0, 0, 0, 0, 0, 'Zonozz - Void'),
-;
+-- (55308, 4, 0, '...', 14, 0, 100, 0, 0, 0, 0, 0, 0, 'Zonozz - Shadows'),
+-- (55308, 6, 0, '...', 14, 0, 100, 0, 0, 0, 0, 0, 0, 'Zonozz - Void');
+
