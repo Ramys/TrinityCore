@@ -286,7 +286,7 @@ struct boss_morchok : public BossAI
             }
             else
             {
-                _kohcrom->SetHealth(1);
+                Unit::Kill(me, _kohcrom, false); // Kohcrom must die with Morchok
             }
         }
     }
@@ -499,7 +499,7 @@ struct npc_morchok_kohcrom : public BossAI
             }
             else
             {
-                _twin->SetHealth(1);
+                Unit::Kill(me, _twin, false); // Morchok must die with Kohcrom
             }
         }
     }
