@@ -138,7 +138,7 @@ struct boss_morchok : public BossAI
         {
             instance->SetBossState(DATA_MORCHOK, NOT_STARTED);
             if (auto* map = me->GetMap())
-                map->SetWorldState(WORLDSTATE_DONT_STAND_SO_CLOSE, 1);
+                map->SetWorldStateValue(WORLDSTATE_DONT_STAND_SO_CLOSE, 1, false);
         }
     }
 
@@ -184,7 +184,7 @@ struct boss_morchok : public BossAI
             instance->SetBossState(DATA_MORCHOK, FAIL);
     }
 
-    void SetGUID(ObjectGuid guid, int32 type) override
+    void SetGUID(ObjectGuid const& guid, int32 type) override
     {
         if (type == DATA_GUID_1)
             _stompGuid1 = guid;
@@ -212,7 +212,7 @@ struct boss_morchok : public BossAI
     {
         if (type == DATA_ALLOW_ACHIEV)
             if (auto* map = me->GetMap())
-                map->SetWorldState(WORLDSTATE_DONT_STAND_SO_CLOSE, 0);
+                map->SetWorldStateValue(WORLDSTATE_DONT_STAND_SO_CLOSE, 0, false);
         (void)data;
     }
 
@@ -307,12 +307,12 @@ struct boss_morchok : public BossAI
 
         if ((me->GetDistance(me->GetHomePosition()) > 500.0f) || (me->GetPositionX() > -1915.0f))
         {
-            EnterEvadeMode(EVADE_REASON_SEQUENCE);
+            EnterEvadeMode(EVADE_REASON_SEQUENCE_BREAK);
             return;
         }
         if (_isHeroic && _kohcrom && _kohcrom->GetPositionX() > -1915.0f)
         {
-            EnterEvadeMode(EVADE_REASON_SEQUENCE);
+            EnterEvadeMode(EVADE_REASON_SEQUENCE_BREAK);
             return;
         }
 
@@ -347,14 +347,14 @@ struct boss_morchok : public BossAI
                     ++_stompCount;
                     if (_kohcrom && _kohcrom->IsAlive())
                         _kohcrom->AI()->DoAction(ACTION_KOHCROM_STOMP);
-                    events.ScheduleEvent(EVENT_STOMP, 12s + rand() % 2000, 0, PHASE_NORMAL);
+                    events.ScheduleEvent(EVENT_STOMP, 12000 + rand() % 2000, 0, PHASE_NORMAL);
                     break;
                 }
                 case EVENT_CRUSH_ARMOR:
                 {
                     if (Unit* victim = me->GetVictim())
                         DoCast(victim, SPELL_CRUSH_ARMOR);
-                    events.ScheduleEvent(EVENT_CRUSH_ARMOR, 12s + rand() % 3000, 0, PHASE_NORMAL);
+                    events.ScheduleEvent(EVENT_CRUSH_ARMOR, 12000 + rand() % 3000, 0, PHASE_NORMAL);
                     break;
                 }
                 case EVENT_RESONATING_CRYSTAL:
@@ -365,7 +365,7 @@ struct boss_morchok : public BossAI
                     Talk(ANN_CRYSTAL);
                     if (_kohcrom && _kohcrom->IsAlive())
                         _kohcrom->AI()->DoAction(ACTION_KOHCROM_CRYSTAL);
-                    events.ScheduleEvent(EVENT_RESONATING_CRYSTAL, 12s + rand() % 2000, 0, PHASE_NORMAL);
+                    events.ScheduleEvent(EVENT_RESONATING_CRYSTAL, 12000 + rand() % 2000, 0, PHASE_NORMAL);
                     break;
                 }
                 case EVENT_THE_EARTH_CONSUMES_YOU:
@@ -416,18 +416,7 @@ struct boss_morchok : public BossAI
 
         DoMeleeAttackIfReady();
     }
-
-    void EnterEvadeMode(EvadeReason why) override
-    {
-        BossAI::EnterEvadeMode(why);
-        if (instance)
-            instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
-        _DespawnAtEvade();
-        if (instance)
-            instance->SetBossState(DATA_MORCHOK, FAIL);
-    }
 };
-
 
 struct npc_morchok_kohcrom : public BossAI
 {
@@ -465,8 +454,8 @@ struct npc_morchok_kohcrom : public BossAI
     {
         BossAI::JustEngagedWith(who);
         events.SetPhase(PHASE_NORMAL);
-        events.ScheduleEvent(EVENT_STOMP, std::chrono::seconds(12), 0, PHASE_NORMAL);
-        events.ScheduleEvent(EVENT_RESONATING_CRYSTAL, std::chrono::seconds(18), 0, PHASE_NORMAL);
+        events.ScheduleEvent(EVENT_STOMP, 12000, 0, PHASE_NORMAL);
+        events.ScheduleEvent(EVENT_RESONATING_CRYSTAL, 18000, 0, PHASE_NORMAL);
         // Kohcrom (Heroico) NAO usa Crush Armor (ref PDF).
     }
 
@@ -520,12 +509,12 @@ struct npc_morchok_kohcrom : public BossAI
             {
                 case EVENT_STOMP:
                     DoCastAOE(SPELL_STOMP);
-                    events.ScheduleEvent(EVENT_STOMP, 12s + rand() % 2000, 0, PHASE_NORMAL);
+                    events.ScheduleEvent(EVENT_STOMP, 12000 + rand() % 2000, 0, PHASE_NORMAL);
                     break;
                 case EVENT_RESONATING_CRYSTAL:
                     if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
                         DoCast(target, SPELL_RESONATING_CRYSTAL);
-                    events.ScheduleEvent(EVENT_RESONATING_CRYSTAL, 12s + rand() % 2000, 0, PHASE_NORMAL);
+                    events.ScheduleEvent(EVENT_RESONATING_CRYSTAL, 12000 + rand() % 2000, 0, PHASE_NORMAL);
                     break;
                 default:
                     break;
@@ -551,7 +540,7 @@ struct npc_morchok_resonating_crystal : public ScriptedAI
         // Cristal Ressonante: 103640 invoca 55269 no chao. Retail 4.3.4: cristal fica parado 12s e explode (103494).
         // Nao deve perseguir jogador nem explodir ao tocar - corrige sumico rapido.
         me->SetReactState(REACT_PASSIVE);
-        me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_DISABLE_MOVE);
+        me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_NON_ATTACKABLE);
         me->GetMotionMaster()->Clear();
         me->GetMotionMaster()->MoveIdle();
         // Garante display/aura visual se DBC nao aplicar automaticamente
