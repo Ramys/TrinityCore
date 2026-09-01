@@ -650,11 +650,11 @@ class spell_morchok_black_blood_of_the_earth_dmg : public SpellScript
             GetPlayerListInGrid(pls, caster, 200.0f);
             for (Player* pl : pls)
             {
-                std::list<Player*> near;
-                GetPlayerListInGrid(near, pl, 5.0f);
-                near.remove_if([pl](Player* t){ return !t || t->GetGUID() == pl->GetGUID(); });
+                std::list<Player*> nearPlayers;
+                GetPlayerListInGrid(nearPlayers, pl, 5.0f);
+                nearPlayers.remove_if([pl](Player* t){ return !t || t->GetGUID() == pl->GetGUID(); });
                 uint32 allow = pl->GetMap()->Is25ManRaid() ? 1 : 0;
-                if (near.size() > allow)
+                if (nearPlayers.size() > allow)
                     if (InstanceScript* inst = caster->GetInstanceScript())
                         if (Creature* boss = inst->GetCreature(DATA_MORCHOK))
                             boss->AI()->SetData(DATA_ALLOW_ACHIEV, 0);
