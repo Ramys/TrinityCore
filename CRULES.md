@@ -16,6 +16,7 @@
 12. [CONVENCOES C++](#12-convencoes-c)
 13. [SISTEMA DE EVENTOS](#13-sistema-de-eventos)
 14. [MOVEMENT GENERATORS](#14-movement-generators)
+15. [COMPATIBILIDADE E GOTCHAS CATA 4.3.4](#15-compatibilidade-e-gotchas-cata-434)
 
 ---
 
