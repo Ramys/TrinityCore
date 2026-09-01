@@ -103,7 +103,7 @@ Para evitar "invenções" e manter a integridade do projeto, os agentes devem **
 | [Issue Tracker](https://github.com/Ramys/TrinityCore/issues) | Reportar e verificar problemas |
 | [Pull Requests](https://github.com/Ramys/TrinityCore/pulls) | Submeter e revisar correções |
 | [Wiki do TrinityCore](https://www.trinitycore.org/) | Documentação geral do projeto |
-| [MEMORY_ROOT_CATACLYSM_434.md](MEMORY_ROOT_CATACLYSM_434.md) | Memória de port MoP 5.4.8 -> Cata 4.3.4 (APIs/gotchas: `.Register` sem `PrepareSpellScript`; `AddSC_*` escopo global; `MINDISTANCE`; `DoEffectCalcDamageAndHealing`; `SetWorldStateValue`; `EVADE_REASON_SEQUENCE_BREAK`; 6-param `SelectTarget`; `GetPlayerListInGrid`) |
+| [MEMORY_ROOT_CATACLYSM_434.md](MEMORY_ROOT_CATACLYSM_434.md) | Memória de port MoP 5.4.8 -> Cata 4.3.4 (APIs/gotchas: `.Register` sem `PrepareSpellScript`; `AddSC_*` escopo global; `MINDISTANCE`; `DoEffectCalcDamageAndHealing`; `SetWorldStateValue`; `EVADE_REASON_SEQUENCE_BREAK`; 6-param `SelectTarget`; `GetPlayerListInGrid`; macros Windows `near`/`far`) |
 
 ---
 
