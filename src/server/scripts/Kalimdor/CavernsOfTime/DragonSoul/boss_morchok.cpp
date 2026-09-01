@@ -266,6 +266,16 @@ struct boss_morchok : public BossAI
         if (!me->IsAlive())
             return;
 
+        // FIX Normal: dano letal força morte (evita trava 1 HP por transição/fase)
+        if (!_isHeroic && me->GetHealth() <= damage)
+        {
+            TC_LOG_DEBUG("scripts", "Morchok Normal: lethal {} vs hp {}, forcing JUST_DIED", damage, me->GetHealth());
+            me->SetHealth(0);
+            me->setDeathState(JUST_DIED);
+            JustDied(nullptr);
+            return;
+        }
+
         if (_isHeroic && !_kohcromSummoned && me->HealthBelowPctDamaged(90, damage))
         {
             _kohcromSummoned = true;
