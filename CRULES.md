@@ -1486,6 +1486,55 @@ _events.SetPhase(PHASE_TWO);
 
 // C++ phases
 enum Phases
+
+
+---
+
+## 15. COMPATIBILIDADE E GOTCHAS CATA 4.3.4
+
+### 15.1 SelectTarget com Filtro de Aura
+A assinatura no core 4.3.4 possui 6 argumentos:
+`Unit* SelectTarget(SelectAggroTarget targetType, uint32 offset = 0, float dist = 0.0f, bool playerOnly = false, bool withTank = true, int32 aura = 0);`
+- **Gotcha**: Passar `SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true, -SPELL_ID)` trunca o `int32` da spell para o `bool withTank`.
+- **Correto**: Sempre passe o 5º argumento explicitamente quando for filtrar por aura:
+  `SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true, true, -SPELL_ID)`
+
+### 15.2 World States em Mapas
+- Não usar `Map::SetWorldState(id, value)` (MoP API).
+- Usar `Map::SetWorldStateValue(id, value, hidden)` (ex: `me->GetMap()->SetWorldStateValue(WORLDSTATE_ID, 1, false)`).
+
+### 15.3 EvadeReason e EnterEvadeMode
+- `EnterEvadeMode(EvadeReason why)` exige argumento explícito (ex: `EnterEvadeMode(EVADE_REASON_OTHER)`).
+- Enum de quebra de sequência: `EVADE_REASON_SEQUENCE_BREAK` (e não `EVADE_REASON_SEQUENCE`).
+
+### 15.4 Busca de Jogadores sem FindNearestPlayer
+- `FindNearestPlayer` não existe em `Unit`/`Creature` no Cata 4.3.4.
+- Para obter e ordenar jogadores mais próximos:
+```cpp
+std::list<Player*> playerList;
+me->GetPlayerListInGrid(playerList, 100.0f);
+playerList.sort(Trinity::ObjectDistanceOrderPred(me));
+for (Player* player : playerList)
+{
+    // ...
+}
+```
+
+### 15.5 Flags e Movimento
+- `UNIT_FLAG_DISABLE_MOVE` não existe em 4.3.4.
+- Imobilização em scripts: use `UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_NON_ATTACKABLE`, `SetReactState(REACT_PASSIVE)` ou MotionMaster.
+- `Unit::SetSpeed` recebe 2 parâmetros: `SetSpeed(UnitMoveType, float)` (sem o terceiro booleano de MoP).
+
+### 15.6 Combate com a Zona
+- `Creature::SetInCombatWithZone()` não existe.
+- Chamar: `if (creature->AI()) creature->AI()->DoZoneInCombat();`
+
+### 15.7 Expressões de Tempo e Chrono Literals
+- Não misture chrono literals com expressões aritméticas que dependem de template deduction em MSVC:
+  `events.ScheduleEvent(EVENT_ID, 12s + urand(0, 3000)); // PODE FALHAR NO MSVC`
+- Prefira inteiros de milissegundos explícitos:
+  `events.ScheduleEvent(EVENT_ID, 12000 + urand(0, 3000));`
+
 {
     PHASE_ONE = 1,
     PHASE_TWO = 2,
