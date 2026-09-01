@@ -401,6 +401,8 @@ struct npc_warlord_zonozz_void_of_the_unmaking : public ScriptedAI
         c->SetReactState(REACT_PASSIVE);
         c->SetCanFly(true);
         c->SetDisableGravity(true);
+        c->ApplySpellImmune(0, IMMUNITY_EFFECT, SPELL_EFFECT_KNOCK_BACK, true);
+        c->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_GRIP, true);
         SetCombatMovement(false);
     }
     EventMap _events;
