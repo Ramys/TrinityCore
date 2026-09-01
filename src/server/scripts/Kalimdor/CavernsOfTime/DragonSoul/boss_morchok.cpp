@@ -29,40 +29,28 @@ enum ScriptedTexts
 {
     SAY_AGGRO   = 0,
     SAY_DEATH   = 1,
-    SAY_GROUND1 = 6, // "The stone calls..." / Falling Fragments
-    SAY_GROUND2 = 7, // "The ground shakes..."
-    SAY_CRYSTAL = 9,
+    SAY_GROUND1 = 6, // "The earth consumes you!" / Falling Fragments
+    SAY_GROUND2 = 7, // "Feel the fury of the earth!" / Black Blood of the Earth
+    SAY_CRYSTAL = 9, // "Flee, and die." / "Run, and perish."
     SAY_KILL    = 10,
-    SAY_KOHCROM = 11,
-    ANN_CRYSTAL = 12
+    SAY_KOHCROM = 11, // "Kohcrom, crush them!"
+    ANN_CRYSTAL = 12  // "%s summons a Resonating Crystal!"
 };
 
 enum Spells
 {
     SPELL_BERSERK                   = 47008,
-    SPELL_STOMP                     = 103414, // 1.5s cast, 2M split 25y, double tank+closest, +100% phys taken 10s (effect #3)
+    SPELL_STOMP                     = 103414, // 1.5s cast, AoE 25y, double closest 2, +100% phys taken
     SPELL_CRUSH_ARMOR               = 103687, // -10% armor 20s stack 10
     SPELL_RESONATING_CRYSTAL        = 103640, // summon crystal
-    SPELL_RESONATING_CRYSTAL_SUMMON = 103639, // trigger missile (wowhead cata)
-    SPELL_RESONATING_CRYSTAL_DMG    = 103494, // explosion split 3/7 (dbc cata) - MoP 103545 equiv.
-    SPELL_FURIOUS                   = 103846, // 20% at 20%
-    SPELL_BLACK_BLOOD_OF_THE_EARTH  = 103785, // 5k Nature + 100% taken 6s stack
-
-    // Earth's Vengeance / Falling Fragments sequence (Cata)
-    // wowhead cata 103176 = Falling Fragments (channeled 5s) - parte de Earth's Vengeance
-    SPELL_FALLING_FRAGMENTS         = 103176,
-    SPELL_EARTHS_VENGEANCE          = 103176, // alias para compat. DBC 103176 existe em cata
-    SPELL_EARTHS_VENGEANCE_MISSILE  = 103177, // @TODO: confirmar DBC 4.3.4 (MoP 103177)
-    SPELL_EARTHS_VENGEANCE_DMG      = 103178, // @TODO: confirmar DBC 4.3.4 (MoP 103178)
-
-    SPELL_SUMMON_KOHCROM            = 109017, // Summon Kohcrom (dbc confirmado)
-    SPELL_MORCHOK_JUMP              = 109070, // visual jump 90% heroico (MoP) - existe em cata? se nao, falha silenciosa
-
-    // Invalidos em cata - desativados (wowhead 103548=404, 103558=Choking Smoke Bomb rogue)
-    SPELL_THE_EARTH_CONSUMES_YOU    = 0, // @TODO: ID retail 4.3.4 nao encontrado em DBC Cataclysm Preservation; usar Falling Fragments como proxy
-    SPELL_EARTH_SHATTERING          = 0, // @TODO: 103694 nao existe em Spell.dbc 4.3.4
-    SPELL_KOHCROM_VISUAL            = 0, // @TODO: 103807 nao existe em Spell.dbc 4.3.4
-    SPELL_STOMP_VULNERABILITY       = 0  // Stomp ja aplica 100% via effect #3 de 103414, nao precisa spell extra; hook guardado
+    SPELL_RESONATING_CRYSTAL_SUMMON = 103639, // trigger missile
+    SPELL_RESONATING_CRYSTAL_DMG    = 103494, // explosion split 3/7
+    SPELL_FURIOUS                   = 103846, // +20% dmg & +20% atk speed at 20% HP
+    SPELL_EARTHEN_VORTEX            = 103821, // Pulls all players to boss & slows 50%
+    SPELL_FALLING_FRAGMENTS         = 103176, // Channeled 5s, creates stone pillars for LoS
+    SPELL_BLACK_BLOOD_OF_THE_EARTH  = 103785, // 5k Nature + 100% taken stack 6s
+    SPELL_SUMMON_KOHCROM            = 109017, // Summon Kohcrom
+    SPELL_MORCHOK_JUMP              = 109070  // Visual jump at 90%
 };
 
 enum Events
@@ -70,15 +58,12 @@ enum Events
     EVENT_STOMP                  = 1,
     EVENT_CRUSH_ARMOR            = 2,
     EVENT_RESONATING_CRYSTAL     = 3,
-    EVENT_THE_EARTH_CONSUMES_YOU = 4,
-    EVENT_EARTHS_VENGEANCE       = 5,
-    EVENT_BLACK_BLOOD            = 6,
-    EVENT_BLACK_BLOOD_END        = 7,
-    EVENT_BERSERK                = 8,
-    EVENT_EARTHEN_VORTEX         = 9, // MoP-only: compat delay, nao schedulado Cata
-    EVENT_CONTINUE               = 10,
-    EVENT_UPDATE_HEALTH          = 11,
-    EVENT_CHECK_PLAYERS          = 12
+    EVENT_EARTHEN_VORTEX         = 4,
+    EVENT_BLACK_BLOOD            = 5,
+    EVENT_BLACK_BLOOD_END        = 6,
+    EVENT_BERSERK                = 7,
+    EVENT_CONTINUE               = 8,
+    EVENT_PHASE_FALLBACK         = 9
 };
 
 enum Phases
@@ -87,53 +72,67 @@ enum Phases
     PHASE_BLACK_BLOOD = 2
 };
 
-enum MiscData
+enum Actions
 {
-    DATA_GUID_1              = 1,
-    DATA_GUID_2              = 2,
-    DATA_KOHCROM_DONE        = 3,
-    DATA_ALLOW_ACHIEV        = 4,
-    ACTION_KOHCROM_STOMP     = 1,
-    ACTION_KOHCROM_CRYSTAL   = 2,
-    ACTION_TWIN_LINK         = 100,
-    ACTION_CRYSTAL_EXPLODED  = 101
+    ACTION_CRYSTAL_EXPLODED    = 1,
+    ACTION_KOHCROM_STOMP       = 2,
+    ACTION_KOHCROM_CRYSTAL     = 3,
+    ACTION_KOHCROM_VORTEX      = 4,
+    ACTION_KOHCROM_BLACK_BLOOD = 5,
+    ACTION_TWIN_LINK           = 6
+};
+
+enum DataMisc
+{
+    DATA_GUID_1           = 1,
+    DATA_GUID_2           = 2,
+    DATA_ALLOW_ACHIEV     = 3,
+    DATA_KOHCROM_DONE     = 4
 };
 
 enum WorldStates
 {
-    WORLDSTATE_DONT_STAND_SO_CLOSE = 10018
+    WORLDSTATE_DONT_STAND_SO_CLOSE = 10003
 };
 
 struct boss_morchok : public BossAI
 {
-    boss_morchok(Creature* creature) : BossAI(creature, DATA_MORCHOK), _kohcrom(nullptr), _stompCount(0), _crystalCount(0), _kohcromSummoned(false)
+    boss_morchok(Creature* creature) : BossAI(creature, DATA_MORCHOK),
+        _kohcrom(nullptr),
+        _stompCount(0),
+        _crystalCount(0),
+        _kohcromSummoned(false),
+        _isHeroic(false)
     {
         me->ApplySpellImmune(0, IMMUNITY_EFFECT, SPELL_EFFECT_KNOCK_BACK, true);
         me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_GRIP, true);
-        me->ApplySpellImmune(0, IMMUNITY_STATE, SPELL_AURA_MOD_TAUNT, true);
-        _isHeroic = me->GetMap()->IsHeroic();
+        me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_STUN, true);
+        me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_FEAR, true);
+        me->ApplySpellImmune(0, IMMUNITY_STATE, SPELL_AURA_MOD_TAUNT, false);
+        me->setActive(true);
     }
 
-    bool _isHeroic;
-    bool _kohcromSummoned;
-    uint8 _stompCount;
-    uint8 _crystalCount;
     Creature* _kohcrom;
+    uint32 _stompCount;
+    uint32 _crystalCount;
+    bool _kohcromSummoned;
+    bool _isHeroic;
     ObjectGuid _stompGuid1;
     ObjectGuid _stompGuid2;
 
     void Reset() override
     {
         _Reset();
+        if (_kohcrom && _kohcrom->IsAlive())
+            _kohcrom->DespawnOrUnsummon();
         _kohcrom = nullptr;
-        _kohcromSummoned = false;
         _stompCount = 0;
         _crystalCount = 0;
+        _kohcromSummoned = false;
         _stompGuid1 = ObjectGuid::Empty;
         _stompGuid2 = ObjectGuid::Empty;
         _isHeroic = me->GetMap()->IsHeroic();
-        me->SetReactState(REACT_AGGRESSIVE);
-        me->SetObjectScale(1.0f);
+
         if (instance)
         {
             instance->SetBossState(DATA_MORCHOK, NOT_STARTED);
@@ -147,17 +146,20 @@ struct boss_morchok : public BossAI
         BossAI::JustEngagedWith(who);
         Talk(SAY_AGGRO);
         DoZoneInCombat();
+        _isHeroic = me->GetMap()->IsHeroic();
+
         if (instance)
         {
             instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
             instance->SetBossState(DATA_MORCHOK, IN_PROGRESS);
         }
+
         events.SetPhase(PHASE_NORMAL);
         events.ScheduleEvent(EVENT_STOMP, 12s, 0, PHASE_NORMAL);
-        if (!_isHeroic)
-            events.ScheduleEvent(EVENT_CRUSH_ARMOR, 6s, 0, PHASE_NORMAL);
+        events.ScheduleEvent(EVENT_CRUSH_ARMOR, 6s, 0, PHASE_NORMAL);
         events.ScheduleEvent(EVENT_RESONATING_CRYSTAL, 14s, 0, PHASE_NORMAL);
-        events.ScheduleEvent(EVENT_BERSERK, 420000);
+        events.ScheduleEvent(EVENT_PHASE_FALLBACK, 50s, 0, PHASE_NORMAL);
+        events.ScheduleEvent(EVENT_BERSERK, 420s);
         _stompGuid1 = ObjectGuid::Empty;
         _stompGuid2 = ObjectGuid::Empty;
     }
@@ -167,21 +169,25 @@ struct boss_morchok : public BossAI
         _JustDied();
         Talk(SAY_DEATH);
         if (instance)
+        {
             instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
+            instance->SetBossState(DATA_MORCHOK, DONE);
+        }
         if (_kohcrom && _kohcrom->IsAlive())
             Unit::Kill(me, _kohcrom, false);
-        if (instance)
-            instance->SetBossState(DATA_MORCHOK, DONE);
     }
 
     void EnterEvadeMode(EvadeReason why) override
     {
         BossAI::EnterEvadeMode(why);
         if (instance)
+        {
             instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
-        _DespawnAtEvade();
-        if (instance)
             instance->SetBossState(DATA_MORCHOK, FAIL);
+        }
+        if (_kohcrom && _kohcrom->IsAlive())
+            _kohcrom->DespawnOrUnsummon();
+        _DespawnAtEvade();
     }
 
     void SetGUID(ObjectGuid const& guid, int32 type) override
@@ -224,6 +230,7 @@ struct boss_morchok : public BossAI
             _kohcrom = summon;
             summon->SetMaxHealth(me->GetMaxHealth());
             summon->SetHealth(me->GetHealth());
+            summon->AI()->DoAction(ACTION_TWIN_LINK);
         }
     }
 
@@ -232,6 +239,7 @@ struct boss_morchok : public BossAI
         Talk(SAY_KOHCROM);
         if (SPELL_SUMMON_KOHCROM)
             DoCastSelf(SPELL_SUMMON_KOHCROM, true);
+
         if (!_kohcrom)
         {
             Position pos = me->GetPosition();
@@ -242,13 +250,15 @@ struct boss_morchok : public BossAI
             if (TempSummon* k = me->SummonCreature(NPC_KOHCROM, pos, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 30000))
             {
                 _kohcrom = k;
+                k->SetMaxHealth(me->GetMaxHealth());
                 k->SetHealth(me->GetHealth());
+                k->AI()->DoAction(ACTION_TWIN_LINK);
                 if (Unit* victim = me->GetVictim())
                     k->EngageWithTarget(victim);
             }
         }
         if (SPELL_MORCHOK_JUMP)
-            DoCastSelf(SPELL_MORCHOK_JUMP);
+            DoCastSelf(SPELL_MORCHOK_JUMP, true);
     }
 
     void DamageTaken(Unit* /*attacker*/, uint32& damage) override
@@ -259,22 +269,25 @@ struct boss_morchok : public BossAI
         if (_isHeroic && !_kohcromSummoned && me->HealthBelowPctDamaged(90, damage))
         {
             _kohcromSummoned = true;
-            me->SetReactState(REACT_PASSIVE);
-            me->AttackStop();
             SummonKohcrom();
-            events.DelayEvents(10s);
-            events.ScheduleEvent(EVENT_CONTINUE, 5s);
-            events.ScheduleEvent(EVENT_UPDATE_HEALTH, 2s);
         }
 
         if (!me->HasAura(SPELL_FURIOUS) && me->HealthBelowPctDamaged(20, damage))
             DoCastSelf(SPELL_FURIOUS);
 
+        // Shared Health Pool em Heroico
         if (_kohcrom && _kohcrom->IsAlive())
         {
             uint32 cur = me->GetHealth();
-            uint32 newHealth = (damage < cur) ? (cur - damage) : 1;
-            _kohcrom->SetHealth(newHealth);
+            if (damage < cur)
+            {
+                uint32 newHp = cur - damage;
+                _kohcrom->SetHealth(newHp);
+            }
+            else
+            {
+                _kohcrom->SetHealth(1);
+            }
         }
     }
 
@@ -282,16 +295,23 @@ struct boss_morchok : public BossAI
     {
         if (action == ACTION_CRYSTAL_EXPLODED && events.IsInPhase(PHASE_NORMAL))
         {
-            if (++_crystalCount >= 2)
+            uint32 requiredCrystals = _isHeroic ? 4 : 2;
+            if (++_crystalCount >= requiredCrystals)
             {
-                _crystalCount = 0;
-                events.CancelEvent(EVENT_STOMP);
-                events.CancelEvent(EVENT_CRUSH_ARMOR);
-                events.CancelEvent(EVENT_RESONATING_CRYSTAL);
-                events.SetPhase(PHASE_BLACK_BLOOD);
-                events.ScheduleEvent(EVENT_THE_EARTH_CONSUMES_YOU, 500ms);
+                StartBlackBloodPhase();
             }
         }
+    }
+
+    void StartBlackBloodPhase()
+    {
+        _crystalCount = 0;
+        events.CancelEvent(EVENT_STOMP);
+        events.CancelEvent(EVENT_CRUSH_ARMOR);
+        events.CancelEvent(EVENT_RESONATING_CRYSTAL);
+        events.CancelEvent(EVENT_PHASE_FALLBACK);
+        events.SetPhase(PHASE_BLACK_BLOOD);
+        events.ScheduleEvent(EVENT_EARTHEN_VORTEX, 500ms, 0, PHASE_BLACK_BLOOD);
     }
 
     void KilledUnit(Unit* victim) override
@@ -305,12 +325,7 @@ struct boss_morchok : public BossAI
         if (!UpdateVictim())
             return;
 
-        if ((me->GetDistance(me->GetHomePosition()) > 500.0f) || (me->GetPositionX() > -1915.0f))
-        {
-            EnterEvadeMode(EVADE_REASON_SEQUENCE_BREAK);
-            return;
-        }
-        if (_isHeroic && _kohcrom && _kohcrom->GetPositionX() > -1915.0f)
+        if (me->GetDistance(me->GetHomePosition()) > 150.0f)
         {
             EnterEvadeMode(EVADE_REASON_SEQUENCE_BREAK);
             return;
@@ -325,20 +340,6 @@ struct boss_morchok : public BossAI
         {
             switch (eventId)
             {
-                case EVENT_UPDATE_HEALTH:
-                {
-                    if (me->IsAlive() && _kohcrom && _kohcrom->IsAlive())
-                    {
-                        if (me->GetHealth() < 500000 || _kohcrom->GetHealth() < 500000)
-                            break;
-                        uint32 newHealth = (me->GetHealth() + _kohcrom->GetHealth()) / 2;
-                        newHealth = std::min(newHealth, me->GetMaxHealth());
-                        me->SetHealth(newHealth);
-                        _kohcrom->SetHealth(newHealth);
-                    }
-                    events.ScheduleEvent(EVENT_UPDATE_HEALTH, 3s);
-                    break;
-                }
                 case EVENT_STOMP:
                 {
                     _stompGuid1 = ObjectGuid::Empty;
@@ -347,14 +348,14 @@ struct boss_morchok : public BossAI
                     ++_stompCount;
                     if (_kohcrom && _kohcrom->IsAlive())
                         _kohcrom->AI()->DoAction(ACTION_KOHCROM_STOMP);
-                    events.ScheduleEvent(EVENT_STOMP, 12000 + rand() % 2000, 0, PHASE_NORMAL);
+                    events.ScheduleEvent(EVENT_STOMP, Milliseconds(12000 + rand() % 2000), 0, PHASE_NORMAL);
                     break;
                 }
                 case EVENT_CRUSH_ARMOR:
                 {
                     if (Unit* victim = me->GetVictim())
                         DoCast(victim, SPELL_CRUSH_ARMOR);
-                    events.ScheduleEvent(EVENT_CRUSH_ARMOR, 12000 + rand() % 3000, 0, PHASE_NORMAL);
+                    events.ScheduleEvent(EVENT_CRUSH_ARMOR, Milliseconds(10000 + rand() % 3000), 0, PHASE_NORMAL);
                     break;
                 }
                 case EVENT_RESONATING_CRYSTAL:
@@ -365,38 +366,41 @@ struct boss_morchok : public BossAI
                     Talk(ANN_CRYSTAL);
                     if (_kohcrom && _kohcrom->IsAlive())
                         _kohcrom->AI()->DoAction(ACTION_KOHCROM_CRYSTAL);
-                    events.ScheduleEvent(EVENT_RESONATING_CRYSTAL, 12000 + rand() % 2000, 0, PHASE_NORMAL);
+                    events.ScheduleEvent(EVENT_RESONATING_CRYSTAL, Milliseconds(14000 + rand() % 2000), 0, PHASE_NORMAL);
                     break;
                 }
-                case EVENT_THE_EARTH_CONSUMES_YOU:
+                case EVENT_PHASE_FALLBACK:
+                {
+                    if (events.IsInPhase(PHASE_NORMAL))
+                        StartBlackBloodPhase();
+                    break;
+                }
+                case EVENT_EARTHEN_VORTEX:
                 {
                     Talk(SAY_GROUND1);
-                    if (SPELL_FALLING_FRAGMENTS)
-                        DoCastSelf(SPELL_FALLING_FRAGMENTS);
-                    events.ScheduleEvent(EVENT_EARTHS_VENGEANCE, 5s);
-                    break;
-                }
-                case EVENT_EARTHS_VENGEANCE:
-                {
-                    if (SPELL_EARTHS_VENGEANCE)
-                        DoCastAOE(SPELL_EARTHS_VENGEANCE);
-                    events.ScheduleEvent(EVENT_BLACK_BLOOD, 2s);
+                    DoCastAOE(SPELL_EARTHEN_VORTEX);
+                    DoCastSelf(SPELL_FALLING_FRAGMENTS);
+                    if (_kohcrom && _kohcrom->IsAlive())
+                        _kohcrom->AI()->DoAction(ACTION_KOHCROM_VORTEX);
+                    events.ScheduleEvent(EVENT_BLACK_BLOOD, 5s, 0, PHASE_BLACK_BLOOD);
                     break;
                 }
                 case EVENT_BLACK_BLOOD:
                 {
                     Talk(SAY_GROUND2);
                     DoCastSelf(SPELL_BLACK_BLOOD_OF_THE_EARTH);
-                    events.ScheduleEvent(EVENT_BLACK_BLOOD_END, 12s);
+                    if (_kohcrom && _kohcrom->IsAlive())
+                        _kohcrom->AI()->DoAction(ACTION_KOHCROM_BLACK_BLOOD);
+                    events.ScheduleEvent(EVENT_BLACK_BLOOD_END, 17s, 0, PHASE_BLACK_BLOOD);
                     break;
                 }
                 case EVENT_BLACK_BLOOD_END:
                 {
                     events.SetPhase(PHASE_NORMAL);
-                    events.ScheduleEvent(EVENT_STOMP, 1s, 0, PHASE_NORMAL);
+                    events.ScheduleEvent(EVENT_STOMP, 3s, 0, PHASE_NORMAL);
+                    events.ScheduleEvent(EVENT_CRUSH_ARMOR, 6s, 0, PHASE_NORMAL);
                     events.ScheduleEvent(EVENT_RESONATING_CRYSTAL, 12s, 0, PHASE_NORMAL);
-                    if (!_isHeroic)
-                        events.ScheduleEvent(EVENT_CRUSH_ARMOR, 10s, 0, PHASE_NORMAL);
+                    events.ScheduleEvent(EVENT_PHASE_FALLBACK, 50s, 0, PHASE_NORMAL);
                     break;
                 }
                 case EVENT_CONTINUE:
@@ -420,11 +424,13 @@ struct boss_morchok : public BossAI
 
 struct npc_morchok_kohcrom : public BossAI
 {
-    npc_morchok_kohcrom(Creature* creature) : BossAI(creature, DATA_MORCHOK), _twin(nullptr)
+    npc_morchok_kohcrom(Creature* creature) : BossAI(creature, DATA_KOHCROM), _twin(nullptr)
     {
         me->ApplySpellImmune(0, IMMUNITY_EFFECT, SPELL_EFFECT_KNOCK_BACK, true);
         me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_GRIP, true);
-        me->ApplySpellImmune(0, IMMUNITY_STATE, SPELL_AURA_MOD_TAUNT, true);
+        me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_STUN, true);
+        me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_FEAR, true);
+        me->ApplySpellImmune(0, IMMUNITY_STATE, SPELL_AURA_MOD_TAUNT, false);
         me->setActive(true);
     }
 
@@ -439,14 +445,27 @@ struct npc_morchok_kohcrom : public BossAI
 
     void DoAction(int32 action) override
     {
-        if (action == ACTION_TWIN_LINK && instance)
-            _twin = instance->GetCreature(DATA_MORCHOK);
+        if (action == ACTION_TWIN_LINK)
+        {
+            if (instance)
+                _twin = instance->GetCreature(DATA_MORCHOK);
+        }
         else if (action == ACTION_KOHCROM_STOMP)
-            DoCastAOE(SPELL_STOMP);
+        {
+            events.ScheduleEvent(EVENT_STOMP, 1500ms);
+        }
         else if (action == ACTION_KOHCROM_CRYSTAL)
         {
-            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
-                DoCast(target, SPELL_RESONATING_CRYSTAL);
+            events.ScheduleEvent(EVENT_RESONATING_CRYSTAL, 1500ms);
+        }
+        else if (action == ACTION_KOHCROM_VORTEX)
+        {
+            DoCastAOE(SPELL_EARTHEN_VORTEX);
+            DoCastSelf(SPELL_FALLING_FRAGMENTS);
+        }
+        else if (action == ACTION_KOHCROM_BLACK_BLOOD)
+        {
+            DoCastSelf(SPELL_BLACK_BLOOD_OF_THE_EARTH);
         }
     }
 
@@ -454,9 +473,8 @@ struct npc_morchok_kohcrom : public BossAI
     {
         BossAI::JustEngagedWith(who);
         events.SetPhase(PHASE_NORMAL);
-        events.ScheduleEvent(EVENT_STOMP, 12000, 0, PHASE_NORMAL);
-        events.ScheduleEvent(EVENT_RESONATING_CRYSTAL, 18000, 0, PHASE_NORMAL);
-        // Kohcrom (Heroico) NAO usa Crush Armor (ref PDF).
+        if (!_twin && instance)
+            _twin = instance->GetCreature(DATA_MORCHOK);
     }
 
     void DamageTaken(Unit* /*attacker*/, uint32& damage) override
@@ -464,19 +482,26 @@ struct npc_morchok_kohcrom : public BossAI
         if (!me->IsAlive())
             return;
 
-        // Vida compartilhada Heroico: espelha dano de Kohcrom -> Morchok sem underflow e sem dano duplo.
-        // Usa vida de Kohcrom (me) como base, não a do twin, para evitar dessync quando vidas divergem.
-        // Se letal, deixa twin com 1 HP e deixa o core matar Kohcrom; JustDied mata o twin.
-        if (_twin && _twin->IsAlive())
-        {
-            uint32 cur = me->GetHealth();
-            uint32 newHealth = (damage < cur) ? (cur - damage) : 1;
-            _twin->SetHealth(newHealth);
-            // Não tocar em me->SetHealth aqui: core ainda vai aplicar `damage` em Kohcrom. Se setássemos me também, seria dano duplo.
-        }
+        if (!_twin && instance)
+            _twin = instance->GetCreature(DATA_MORCHOK);
 
         if (!me->HasAura(SPELL_FURIOUS) && me->HealthBelowPctDamaged(20, damage))
             DoCastSelf(SPELL_FURIOUS);
+
+        // Shared Health Pool em Heroico: espelha dano de Kohcrom -> Morchok
+        if (_twin && _twin->IsAlive())
+        {
+            uint32 cur = me->GetHealth();
+            if (damage < cur)
+            {
+                uint32 newHp = cur - damage;
+                _twin->SetHealth(newHp);
+            }
+            else
+            {
+                _twin->SetHealth(1);
+            }
+        }
     }
 
     void JustDied(Unit* /*killer*/) override
@@ -509,12 +534,10 @@ struct npc_morchok_kohcrom : public BossAI
             {
                 case EVENT_STOMP:
                     DoCastAOE(SPELL_STOMP);
-                    events.ScheduleEvent(EVENT_STOMP, 12000 + rand() % 2000, 0, PHASE_NORMAL);
                     break;
                 case EVENT_RESONATING_CRYSTAL:
                     if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
                         DoCast(target, SPELL_RESONATING_CRYSTAL);
-                    events.ScheduleEvent(EVENT_RESONATING_CRYSTAL, 12000 + rand() % 2000, 0, PHASE_NORMAL);
                     break;
                 default:
                     break;
@@ -603,22 +626,11 @@ class spell_morchok_stomp : public SpellScript
             damage *= 2;
     }
 
-    // Heroico: Stomp aumenta dano Fisico recebido em 560% por 10s (ref EJ wowhead 4.3.4, NAO +50%).
-    // CORRIGIDO: Stomp (103414) EFFECT_0 e do tipo DUMMY (SpellEffectName=2 no DBC 4.3.4),
-    // entao o filtro deve ser SPELL_EFFECT_DUMMY, nao SPELL_EFFECT_SCHOOL_DAMAGE (que nunca disparava).
-    // Requer SPELL_STOMP_VULNERABILITY != 0 para aplicar o debuff.
-    void HandleOnHit(SpellEffIndex /*effIndex*/)
-    {
-        if (GetCaster()->GetMap()->IsHeroic() && SPELL_STOMP_VULNERABILITY)
-            if (Unit* hit = GetHitUnit())
-                GetCaster()->AddAura(SPELL_STOMP_VULNERABILITY, hit);
-    }
-
     void Register() override
     {
-        OnObjectAreaTargetSelect.Register(&spell_morchok_stomp::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ENEMY);
+        OnObjectAreaTargetSelect.Register(&spell_morchok_stomp::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+        OnObjectAreaTargetSelect.Register(&spell_morchok_stomp::FilterTargets, EFFECT_1, TARGET_UNIT_SRC_AREA_ENEMY);
         CalcDamage.Register(&spell_morchok_stomp::CalculateDamage);
-        OnEffectHitTarget.Register(&spell_morchok_stomp::HandleOnHit, EFFECT_0, SPELL_EFFECT_DUMMY);
     }
 
 private:
