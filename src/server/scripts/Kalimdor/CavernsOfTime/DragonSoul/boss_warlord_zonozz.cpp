@@ -1,0 +1,278 @@
+﻿/*
+ * TrinityCore 4.3.4 - Dragon Soul: Warlord Zon'ozz
+ * Port MoP 5.4.8 725 -> Cata 4.3.4
+ * Ref: wowhead cata 55308, EJ 4.3.4, Spell.dbc Cataclysm Preservation Project
+ *
+ * Encounter flow:
+ *   1. Boss spams Focused Anger (+dmg stacks), Psychic Drain (frontal cone heal),
+ *      Disrupting Shadows (DoT on players, explodes on dispel).
+ *   2. Boss summons Void of the Unmaking every ~90s.
+ *   3. Void bounces between players. Each bounce adds stack of Void Diffusion Buff (106836)
+ *      on the orb: +20% dmg, +20% size per stack.
+ *   4. If Void reaches outer edge: Black Blood Eruption (108799) = 119400-120600 AoE knockup.
+ *   5. If Void returns to boss: Void Diffusion debuff (104031) applied = +5% dmg taken per
+ *      bounce stack. Focused Anger removed. Boss enters Tantrum phase.
+ *   6. Tantrum phase: Boss teleports to center, casts Darkness (109413, visual), Tantrum
+ *      (103953, 10s channel). Normal: Black Blood of Go'rath (104378, 15210-15990/s 30s).
+ *      Heroic: tentacles spawn (Eyes/Flails/Claws) each applying 104377 (3220/2s).
+ *   7. After 30s blood phase ends, boss re-engages. Void respawns after delay.
+ *   8. Heroic tentacle counts: 10H=4E/2F/1C, 25H=8E/4F/2C. Normal: Eyes only (non-attackable).
+ *   9. Achievement Ping-Pong Champion (worldstate 10019): 9+ bounces in single void.
+ */
+#include "dragon_soul.h"
+#include "ScriptedCreature.h"
+#include "ScriptMgr.h"
+#include "SpellScript.h"
+#include "SpellAuraEffects.h"
+#include "SpellInfo.h"
+#include "CreatureTextMgr.h"
+#include "MoveSplineInit.h"
+#include "ObjectAccessor.h"
+#include "TemporarySummon.h"
+#include "Player.h"
+#include "InstanceScript.h"
+#include "Map.h"
+#include "Containers.h"
+#include <cmath>
+
+namespace DragonSoul::Zonozz
+{
+enum Texts
+{
+    SAY_AGGRO   = 0, SAY_DEATH = 1, SAY_INTRO = 2, SAY_KILL  = 3,
+    SAY_SHADOWS = 4, SAY_BLOOD = 5, SAY_VOID  = 6
+};
+enum Spells
+{
+    // Boss abilities
+    SPELL_BERSERK                        = 26662,
+    SPELL_FOCUSED_ANGER                  = 104543,
+    SPELL_PSYCHIC_DRAIN                  = 104323,
+    SPELL_PSYCHIC_DRAIN_DMG              = 104322,
+    SPELL_DISRUPTING_SHADOWS             = 103434,
+    SPELL_DISRUPTING_SHADOWS_DMG         = 103948,
+    // Void of the Unmaking
+    SPELL_VOID_OF_THE_UNMAKING_DMG       = 103521,
+    SPELL_VOID_OF_THE_UNMAKING_VIS       = 109187,
+    SPELL_VOID_OF_THE_UNMAKING_SUMMON    = 103571,
+    SPELL_VOID_OF_THE_UNMAKING_PREV      = 103627,
+    SPELL_VOID_OF_THE_UNMAKING_DUMMY     = 103946,
+    // Void Diffusion
+    SPELL_VOID_DIFFUSION_ORB_BUFF        = 106836,
+    SPELL_VOID_DIFFUSION_DMG             = 103527,
+    SPELL_VOID_DIFFUSION_DEBUFF          = 104031,
+    // Black Blood / Tantrum phase
+    SPELL_DARKNESS                       = 109413,
+    SPELL_TANTRUM                        = 103953,
+    SPELL_BLACK_BLOOD_OF_GORATH          = 104377,
+    SPELL_BLACK_BLOOD_OF_GORATH_SELF     = 104378,
+    SPELL_BLACK_BLOOD_ERUPTION           = 108799,
+    SPELL_BLACK_BLOOD_ERUPTION_DMG       = 108794,
+    SPELL_BLOOD_OF_GORATH_DUMMY          = 103932,
+    // Tentacle abilities
+    SPELL_EYE_OF_GORATH                  = 109190,
+    SPELL_CLAW_OF_GORATH                 = 109191,
+    SPELL_FLAIL_OF_GORATH                = 109193,
+    SPELL_SLUDGE_SPEW                    = 110297,
+    SPELL_WILD_FLAIL                     = 109199,
+    SPELL_OOZE_SPIT                      = 109396,
+    SPELL_SHADOW_GAZE                    = 104347,
+    // Whispers
+    SPELL_ZONOZZ_WHISPER_AGGRO           = 109874,
+    SPELL_ZONOZZ_WHISPER_INTRO           = 109875,
+    SPELL_ZONOZZ_WHISPER_DEATH           = 109876,
+    SPELL_ZONOZZ_WHISPER_KILL            = 109877,
+    SPELL_ZONOZZ_WHISPER_BLOOD           = 109878,
+    SPELL_ZONOZZ_WHISPER_SHADOWS         = 109879,
+    SPELL_ZONOZZ_WHISPER_VOID            = 109880,
+    SPELL_VOID_IMMUNITY                  = 62371
+};
+enum Adds
+{
+    NPC_VOID_OF_THE_UNMAKING = 55334,
+    NPC_EYE_OF_GORATH        = 55416,
+    NPC_FLAIL_OF_GORATH      = 55417,
+    NPC_CLAW_OF_GORATH       = 55418,
+    NPC_ZONOZZ               = 55308
+};
+enum Events
+{
+    EVENT_BERSERK                = 1,
+    EVENT_FOCUSED_ANGER          = 2,
+    EVENT_PSYCHIC_DRAIN          = 3,
+    EVENT_DISRUPTING_SHADOWS     = 4,
+    EVENT_VOID_OF_THE_UNMAKING   = 5,
+    EVENT_CHECK_DISTANCE         = 6,
+    EVENT_CONTINUE               = 7,
+    EVENT_UPDATE_AURA            = 8,
+    EVENT_TANTRUM_1              = 9,
+    EVENT_TANTRUM_2              = 10,
+    EVENT_END_TANTRUM_1          = 11,
+    EVENT_END_TANTRUM_2          = 12,
+    EVENT_SLUDGE_SPEW            = 13,
+    EVENT_WILD_FLAIL             = 14,
+    EVENT_OOZE_SPIT              = 15,
+    EVENT_SHADOW_GAZE            = 16
+};
+enum DataMisc
+{
+    DATA_ACHIEVE       = 2,
+    DATA_PHASE_COUNT   = 3,
+    DATA_VOID          = 4
+};
+enum WorldStates
+{
+    WORLDSTATE_PING_PONG_CHAMPION = 10019
+};
+const Position centerPos = { -1769.329956f, -1916.869995f, -226.28f, 0.0f };
+const Position tentaclePos[14] =
+{
+    { -1702.57f, -1884.71f, -221.513f, 3.63f }, { -1801.84f, -1851.69f, -221.436f, 5.27f },
+    { -1792.2f,  -1988.63f, -221.373f, 1.41f }, { -1834.55f, -1952.28f, -221.38f,  0.62f },
+    { -1734.35f, -1983.18f, -221.445f, 2.14f }, { -1745.46f, -1847.31f, -221.437f, 4.43f },
+    { -1839.37f, -1895.09f, -221.381f, 5.98f }, { -1696.95f, -1941.09f, -221.292f, 1.90f },
+    { -1739.24f, -1885.62f, -226.28f, 4.44f },  { -1791.31f, -1885.34f, -226.06f, 4.94f },
+    { -1801.41f, -1939.77f, -226.13f, 0.84f },  { -1759.51f, -1957.94f, -226.00f, 1.67f },
+    { -1774.99f, -1937.95f, -226.35f, 1.30f },  { -1748.31f, -1901.34f, -226.17f, 3.87f }
+};
+const Position portalsPos = { -13629.0f, 12167.0f, 183.0f, 0.0f };
+
+// =====================================================================
+//  BOSS WARLORD ZONOZZ
+// =====================================================================
+struct boss_warlord_zonozz : public BossAI
+{
+    boss_warlord_zonozz(Creature* c) : BossAI(c, DATA_WARLORD_ZONOZZ), _phaseCount(0), _bIntro(false)
+    {
+        c->ApplySpellImmune(0, IMMUNITY_EFFECT, SPELL_EFFECT_KNOCK_BACK, true);
+        c->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_GRIP, true);
+        c->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_STUN, true);
+        c->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_FEAR, true);
+        c->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_ROOT, true);
+        c->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_FREEZE, true);
+        c->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_POLYMORPH, true);
+        c->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_HORROR, true);
+        c->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_SAPPED, true);
+        c->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_CHARM, true);
+        c->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_DISORIENTED, true);
+        c->ApplySpellImmune(0, IMMUNITY_STATE, SPELL_AURA_MOD_CONFUSE, true);
+        c->setActive(true);
+    }
+
+    bool _bIntro;
+    uint32 _phaseCount;
+
+    void Reset() override
+    {
+        _Reset();
+        me->SetReactState(REACT_AGGRESSIVE);
+        _phaseCount = 0;
+        if (auto* m = me->GetMap())
+            m->SetWorldState(WORLDSTATE_PING_PONG_CHAMPION, 0);
+        if (instance)
+        {
+            auto const& pl = me->GetMap()->GetPlayers();
+            for (auto const& r : pl)
+                if (Player* p = r.GetSource())
+                {
+                    p->RemoveAurasDueToSpell(SPELL_BLACK_BLOOD_OF_GORATH);
+                    p->RemoveAurasDueToSpell(SPELL_BLACK_BLOOD_OF_GORATH_SELF);
+                }
+        }
+    }
+
+    void MoveInLineOfSight(Unit* who) override
+    {
+        if (_bIntro)
+            return;
+        if (who->GetTypeId() != TYPEID_PLAYER)
+            return;
+        if (!me->IsWithinDistInMap(who, 100.0f, false))
+            return;
+        Talk(SAY_INTRO);
+        DoCastAOE(SPELL_ZONOZZ_WHISPER_INTRO, true);
+        _bIntro = true;
+    }
+
+    void JustEngagedWith(Unit*) override
+    {
+        if (instance && instance->GetBossState(DATA_MORCHOK) != DONE)
+        {
+            EnterEvadeMode();
+            auto const& pl = me->GetMap()->GetPlayers();
+            for (auto const& r : pl)
+                if (Player* p = r.GetSource())
+                    if (p->IsWithinDist(me, 150.0f))
+                        p->NearTeleportTo(portalsPos.GetPositionX(), portalsPos.GetPositionY(),
+                                          portalsPos.GetPositionZ(), portalsPos.GetOrientation());
+            return;
+        }
+
+        BossAI::JustEngagedWith(nullptr);
+        if (instance)
+            instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
+        if (auto* m = me->GetMap())
+            m->SetWorldState(WORLDSTATE_PING_PONG_CHAMPION, 0);
+
+        _phaseCount = 0;
+        me->SetReactState(REACT_AGGRESSIVE);
+        Talk(SAY_AGGRO);
+        DoCastAOE(SPELL_ZONOZZ_WHISPER_AGGRO, true);
+
+        events.ScheduleEvent(EVENT_BERSERK, 6min);
+        events.ScheduleEvent(EVENT_FOCUSED_ANGER, 10s);
+        events.ScheduleEvent(EVENT_PSYCHIC_DRAIN, 13s);
+        events.ScheduleEvent(EVENT_DISRUPTING_SHADOWS, 25s);
+        events.ScheduleEvent(EVENT_VOID_OF_THE_UNMAKING, 5s);
+
+        if (instance)
+            instance->SetBossState(DATA_WARLORD_ZONOZZ, IN_PROGRESS);
+
+        auto const& pl = me->GetMap()->GetPlayers();
+        for (auto const& r : pl)
+            if (Player* p = r.GetSource())
+            {
+                p->RemoveAurasDueToSpell(SPELL_BLACK_BLOOD_OF_GORATH);
+                p->RemoveAurasDueToSpell(SPELL_BLACK_BLOOD_OF_GORATH_SELF);
+            }
+
+        std::list<Creature*> trash;
+        GetCreatureListWithEntryInGrid(trash, me, NPC_EYE_OF_GORATH, 150.0f);
+        GetCreatureListWithEntryInGrid(trash, me, NPC_FLAIL_OF_GORATH, 150.0f);
+        GetCreatureListWithEntryInGrid(trash, me, NPC_CLAW_OF_GORATH, 150.0f);
+        for (Creature* t : trash)
+            if (t && t->IsAlive())
+                t->SetInCombatWithZone();
+    }
+
+    void JustDied(Unit*) override
+    {
+        _JustDied();
+        Talk(SAY_DEATH);
+        DoCastAOE(SPELL_ZONOZZ_WHISPER_DEATH, true);
+        if (instance)
+            instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
+        auto const& pl = me->GetMap()->GetPlayers();
+        for (auto const& r : pl)
+            if (Player* p = r.GetSource())
+            {
+                p->RemoveAurasDueToSpell(SPELL_BLACK_BLOOD_OF_GORATH);
+                p->RemoveAurasDueToSpell(SPELL_BLACK_BLOOD_OF_GORATH_SELF);
+            }
+    }
+
+    void EnterEvadeMode(EvadeReason why) override
+    {
+        BossAI::EnterEvadeMode(why);
+        if (instance)
+            instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
+        summons.DespawnAll();
+        me->RemoveAurasDueToSpell(SPELL_VOID_OF_THE_UNMAKING_PREV);
+        me->RemoveAurasDueToSpell(SPELL_VOID_DIFFUSION_DEBUFF);
+        me->RemoveAurasDueToSpell(SPELL_FOCUSED_ANGER);
+        me->RemoveAurasDueToSpell(SPELL_DARKNESS);
+        auto const& pl = me->GetMap()->GetPlayers();
+        for (auto const& r : pl)
+            if (Player* p = r.GetSource())
+                p->RemoveAurasDueToSpell(SPELL_BLACK_BLOOD_OF_GORATH);
+    }
