@@ -339,3 +339,54 @@ struct boss_warlord_zonozz : public BossAI
 
     uint32 GetData(uint32 t) const override { if (t == DATA_PHASE_COUNT) return _phaseCount; return 0; }
     void KilledUnit(Unit* v) override { if (v && v->GetTypeId() == TYPEID_PLAYER) Talk(SAY_KILL); }
+    void UpdateAI(uint32 diff) override
+    {
+        if (!UpdateVictim()) return;
+        if (me->GetDistance(me->GetHomePosition()) > 150.0f)
+        { EnterEvadeMode(EvadeReason::EVADE_REASON_OTHER); return; }
+        events.Update(diff);
+        if (me->HasUnitState(UNIT_STATE_CASTING)) return;
+        while (uint32 e = events.ExecuteEvent())
+        {
+            switch (e)
+            {
+                case EVENT_BERSERK: DoCastSelf(SPELL_BERSERK); break;
+                case EVENT_FOCUSED_ANGER: DoCastSelf(SPELL_FOCUSED_ANGER); events.ScheduleEvent(EVENT_FOCUSED_ANGER, 6500ms); break;
+                case EVENT_PSYCHIC_DRAIN: if (Unit* v = me->GetVictim()) DoCast(v, SPELL_PSYCHIC_DRAIN); events.ScheduleEvent(EVENT_PSYCHIC_DRAIN, 20s); break;
+                case EVENT_DISRUPTING_SHADOWS: Talk(SAY_SHADOWS); DoCastAOE(SPELL_DISRUPTING_SHADOWS); DoCastAOE(SPELL_ZONOZZ_WHISPER_SHADOWS, true); events.ScheduleEvent(EVENT_DISRUPTING_SHADOWS, 25s); break;
+                case EVENT_VOID_OF_THE_UNMAKING: summons.DespawnEntry(NPC_VOID_OF_THE_UNMAKING); Talk(SAY_VOID); DoCastSelf(SPELL_VOID_OF_THE_UNMAKING_SUMMON); DoCastAOE(SPELL_ZONOZZ_WHISPER_VOID, true); events.ScheduleEvent(EVENT_VOID_OF_THE_UNMAKING, 90s); break;
+                case EVENT_TANTRUM_1: me->SetReactState(REACT_PASSIVE); me->AttackStop(); me->NearTeleportTo(centerPos.GetPositionX(), centerPos.GetPositionY(), centerPos.GetPositionZ(), centerPos.GetOrientation()); events.ScheduleEvent(EVENT_TANTRUM_2, 3s); break;
+                case EVENT_TANTRUM_2:
+                {
+                    Talk(SAY_BLOOD); DoCastSelf(SPELL_DARKNESS, true);
+                    if (!me->GetMap()->IsHeroic()) DoCastAOE(SPELL_BLACK_BLOOD_OF_GORATH_SELF, true);
+                    DoCastSelf(SPELL_TANTRUM); DoCastAOE(SPELL_ZONOZZ_WHISPER_BLOOD, true);
+                    if (me->GetMap()->IsHeroic()) { if (me->GetMap()->Is25ManRaid()) SpawnRandomTentacles(8, 4, 2); else SpawnRandomTentacles(4, 2, 1); }
+                    else { if (me->GetMap()->Is25ManRaid()) SpawnRandomTentacles(8, 0, 0); else SpawnRandomTentacles(4, 0, 0); }
+                    events.ScheduleEvent(EVENT_END_TANTRUM_1, 11s);
+                    events.ScheduleEvent(EVENT_END_TANTRUM_2, 30s);
+                    break;
+                }
+                case EVENT_END_TANTRUM_1: me->SetReactState(REACT_AGGRESSIVE); if (Unit* v = me->GetVictim()) AttackStart(v); else if (Unit* t = SelectTarget(SELECT_TARGET_RANDOM, 0)) AttackStart(t); break;
+                case EVENT_END_TANTRUM_2:
+                    if (!me->GetMap()->IsHeroic()) summons.DespawnEntry(NPC_EYE_OF_GORATH); else summons.DespawnAll();
+                    me->RemoveAurasDueToSpell(SPELL_VOID_OF_THE_UNMAKING_PREV);
+                    events.ScheduleEvent(EVENT_VOID_OF_THE_UNMAKING, 13s);
+                    events.ScheduleEvent(EVENT_FOCUSED_ANGER, 6s);
+                    events.ScheduleEvent(EVENT_DISRUPTING_SHADOWS, 6s);
+                    events.ScheduleEvent(EVENT_PSYCHIC_DRAIN, 21s);
+                    break;
+                default: break;
+            }
+        }
+        DoMeleeAttackIfReady();
+    }
+private:
+    void SpawnRandomTentacles(uint32 maxEyes, uint32 maxFlails, uint32 maxClaws)
+    {
+        if (maxEyes > 8) maxEyes = 8; if (maxFlails > 4) maxFlails = 4; if (maxClaws > 2) maxClaws = 2;
+        for (uint8 i = 0; i < maxEyes; ++i) me->SummonCreature(NPC_EYE_OF_GORATH, tentaclePos[i], TEMPSUMMON_CORPSE_TIMED_DESPAWN, 3000);
+        for (uint8 i = 8; i < 8 + maxFlails; ++i) me->SummonCreature(NPC_FLAIL_OF_GORATH, tentaclePos[i], TEMPSUMMON_CORPSE_TIMED_DESPAWN, 3000);
+        for (uint8 i = 12; i < 12 + maxClaws; ++i) me->SummonCreature(NPC_CLAW_OF_GORATH, tentaclePos[i], TEMPSUMMON_CORPSE_TIMED_DESPAWN, 3000);
+    }
+};
