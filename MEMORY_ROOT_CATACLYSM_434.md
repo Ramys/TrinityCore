@@ -195,6 +195,8 @@ Validado na migração de `boss_morchok.cpp` (MoP 5.4.8 -> Cata 4.3.4). Compleme
 14. **`Creature::SetInCombatWithZone`**: Não existe em `Creature`. Chamar `if (c->AI()) c->AI()->DoZoneInCombat()`.
 15. **`UnitAI::SetGUID`**: Assinatura em Cata 4.3.4 é `void SetGUID(ObjectGuid const& guid, int32 type) override` (requer `ObjectGuid const&`, não `uint64` ou tipo sem const ref).
 16. **Literais Chrono em Expressões Aritméticas**: Evitar misturar chrono literals com funções randômicas (`12s + urand(...)`) para evitar falhas de dedução de template do MSVC; usar inteiros milissegundos explícitos (`12000 + urand(...)`).
+17. **Identificadores Reservados Windows (`near`, `far`)**: No MSVC/Windows, `<minwindef.h>` define macros vazias `#define near` e `#define far`. Nunca usar `near` ou `far` como nomes de variáveis ou funções (ex.: `std::list<Player*> near;` vira `std::list<Player*> ;`, quebrando a compilação com erros de sintaxe). Use `nearPlayers` ou `nearby`.
+
 
 ---
 
