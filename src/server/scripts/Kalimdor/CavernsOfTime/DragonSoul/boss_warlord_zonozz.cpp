@@ -276,3 +276,66 @@ struct boss_warlord_zonozz : public BossAI
             if (Player* p = r.GetSource())
                 p->RemoveAurasDueToSpell(SPELL_BLACK_BLOOD_OF_GORATH);
     }
+
+    void JustSummoned(Creature* s) override
+    {
+        BossAI::JustSummoned(s);
+        switch (s->GetEntry())
+        {
+            case NPC_VOID_OF_THE_UNMAKING:
+                s->SetOrientation(me->GetOrientation());
+                break;
+            case NPC_EYE_OF_GORATH:
+                if (!me->GetMap()->IsHeroic())
+                {
+                    s->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE);
+                    s->SetReactState(REACT_PASSIVE);
+                }
+                [[fallthrough]];
+            case NPC_CLAW_OF_GORATH:
+            case NPC_FLAIL_OF_GORATH:
+                if (me->GetMap()->IsHeroic())
+                    DoCastAOE(SPELL_BLACK_BLOOD_OF_GORATH, true);
+                break;
+            default: break;
+        }
+    }
+
+    void SummonedCreatureDies(Creature* s, Unit*) override
+    {
+        BossAI::SummonedCreatureDies(s, nullptr);
+        if (s->GetEntry() == NPC_EYE_OF_GORATH || s->GetEntry() == NPC_CLAW_OF_GORATH || s->GetEntry() == NPC_FLAIL_OF_GORATH)
+        {
+            auto const& pl = me->GetMap()->GetPlayers();
+            for (auto const& r : pl)
+                if (Player* p = r.GetSource())
+                    if (Aura* a = p->GetAura(SPELL_BLACK_BLOOD_OF_GORATH))
+                    {
+                        if (a->GetStackAmount() > 1) a->ModStackAmount(-1);
+                        else p->RemoveAurasDueToSpell(SPELL_BLACK_BLOOD_OF_GORATH);
+                    }
+        }
+    }
+
+    void SetData(uint32 t, uint32 d) override
+    {
+        if (t == DATA_ACHIEVE)
+        {
+            if (auto* m = me->GetMap()) m->SetWorldState(WORLDSTATE_PING_PONG_CHAMPION, 1);
+        }
+        else if (t == DATA_VOID)
+        {
+            me->CastCustomSpell(SPELL_VOID_DIFFUSION_DEBUFF, SPELLVALUE_AURA_STACK, int32(d), me, true);
+            if (me->GetMap()->IsHeroic()) DoCastSelf(SPELL_VOID_OF_THE_UNMAKING_PREV, true);
+            me->RemoveAurasDueToSpell(SPELL_FOCUSED_ANGER);
+            events.CancelEvent(EVENT_FOCUSED_ANGER);
+            events.CancelEvent(EVENT_DISRUPTING_SHADOWS);
+            events.CancelEvent(EVENT_PSYCHIC_DRAIN);
+            events.CancelEvent(EVENT_VOID_OF_THE_UNMAKING);
+            events.ScheduleEvent(EVENT_TANTRUM_1, 1500ms);
+            _phaseCount++;
+        }
+    }
+
+    uint32 GetData(uint32 t) const override { if (t == DATA_PHASE_COUNT) return _phaseCount; return 0; }
+    void KilledUnit(Unit* v) override { if (v && v->GetTypeId() == TYPEID_PLAYER) Talk(SAY_KILL); }
