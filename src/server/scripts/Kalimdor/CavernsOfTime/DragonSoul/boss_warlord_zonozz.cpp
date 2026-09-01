@@ -343,7 +343,7 @@ struct boss_warlord_zonozz : public BossAI
     {
         if (!UpdateVictim()) return;
         if (me->GetDistance(me->GetHomePosition()) > 150.0f)
-        { EnterEvadeMode(EvadeReason::EVADE_REASON_OTHER); return; }
+        { EnterEvadeMode(EVADE_REASON_OTHER); return; }
         events.Update(diff);
         if (me->HasUnitState(UNIT_STATE_CASTING)) return;
         while (uint32 e = events.ExecuteEvent())
@@ -557,7 +557,7 @@ struct npc_warlord_zonozz_tentacle : public ScriptedAI
                 case EVENT_SLUDGE_SPEW: if (Unit* t = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true)) DoCast(t, SPELL_SLUDGE_SPEW); _events.ScheduleEvent(EVENT_SLUDGE_SPEW, 12s); break;
                 case EVENT_WILD_FLAIL: DoCastAOE(SPELL_WILD_FLAIL); _events.ScheduleEvent(EVENT_WILD_FLAIL, 7s); break;
                 case EVENT_OOZE_SPIT: if (!me->IsWithinMeleeRange(me->GetVictim())) if (Unit* t = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true)) DoCast(t, SPELL_OOZE_SPIT); _events.ScheduleEvent(EVENT_OOZE_SPIT, 6s); break;
-                case EVENT_SHADOW_GAZE: if (Unit* t = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true, -int32(SPELL_SHADOW_GAZE))) DoCast(t, SPELL_SHADOW_GAZE); _events.ScheduleEvent(EVENT_SHADOW_GAZE, 8s); break;
+                case EVENT_SHADOW_GAZE: if (Unit* t = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true, true, -int32(SPELL_SHADOW_GAZE))) DoCast(t, SPELL_SHADOW_GAZE); _events.ScheduleEvent(EVENT_SHADOW_GAZE, 8s); break;
                 default: break;
             }
         }
