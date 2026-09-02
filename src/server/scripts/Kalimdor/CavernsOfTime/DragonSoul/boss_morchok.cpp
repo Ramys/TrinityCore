@@ -638,8 +638,8 @@ class spell_morchok_stomp : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect.Register(&spell_morchok_stomp::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
-        OnObjectAreaTargetSelect.Register(&spell_morchok_stomp::FilterTargets, EFFECT_1, TARGET_UNIT_SRC_AREA_ENEMY);
+        OnObjectAreaTargetSelect.Register(&spell_morchok_stomp::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ENEMY);
+        OnObjectAreaTargetSelect.Register(&spell_morchok_stomp::FilterTargets, EFFECT_1, TARGET_UNIT_DEST_AREA_ENEMY);
         CalcDamage.Register(&spell_morchok_stomp::CalculateDamage);
     }
 
@@ -708,6 +708,7 @@ private:
 };
 
 // Cristal Ressonante: dano dividido entre 3 (10m) ou 7 (25m) jogadores. 4.3.4: SpellScript direto.
+// DBC 103528 TA 18/B16 idx1 eff3 (area), 103494 TA1 self -> hook deve ser 103528 EFFECT_1
 class spell_morchok_resonating_crystal_dmg : public SpellScript
 {
     void FilterTargets(std::list<WorldObject*>& targets)
@@ -722,7 +723,7 @@ class spell_morchok_resonating_crystal_dmg : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect.Register(&spell_morchok_resonating_crystal_dmg::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ENEMY);
+        OnObjectAreaTargetSelect.Register(&spell_morchok_resonating_crystal_dmg::FilterTargets, EFFECT_1, TARGET_UNIT_DEST_AREA_ENEMY);
     }
 
 private:
