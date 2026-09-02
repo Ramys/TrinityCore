@@ -60,6 +60,15 @@ enum DSCreatures
     NPC_RESONATING_CRYSTAL                      = 55346, // Resonating Crystal (cristal invocado pelo 103640). Entry confirmado em creature_template (lvl 88).
     NPC_WARLORD_ZONOZZ                          = 55308, // Warlord Zon'ozz - 2o boss DS, gateado por Morchok DONE
     NPC_YORSAHJ_THE_UNSLEEPING                  = 55312, // Yor'sahj the Unsleeping - 3o boss DS, gateado por Zon'ozz DONE
+    // Yor'sahj adds
+    NPC_MANA_VOID                               = 56231, // Mana Void - azul (Cobalt) - DBC summon 105530
+    NPC_FORGOTTEN_ONE                           = 56265, // Forgotten One - preto (Dark) - fixate + Psychic Slice 105671
+    NPC_GLOBULE_ACIDIC                          = 55862, // Acidic Globule - verde - Digestive Acid 105031
+    NPC_GLOBULE_SHADOWED                        = 55863, // Shadowed Globule - roxo - Deep Corruption 105171
+    NPC_GLOBULE_GLOWING                         = 55864, // Glowing Globule - amarelo - Glowing Blood 104901
+    NPC_GLOBULE_CRIMSON                         = 55865, // Crimson Globule - vermelho - Searing Blood 105033
+    NPC_GLOBULE_COBALT                          = 55866, // Cobalt Globule - azul - Mana Void 105530
+    NPC_GLOBULE_DARK                            = 55867, // Dark Globule - preto - Black Blood 104894 + Forgotten One
 
     BOSS_MADNESS_OF_DEATHWING                   = 56173,
 
