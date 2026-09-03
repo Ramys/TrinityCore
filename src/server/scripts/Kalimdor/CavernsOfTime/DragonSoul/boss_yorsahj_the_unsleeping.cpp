@@ -96,9 +96,13 @@ struct boss_yorsahj_the_unsleeping : public BossAI
     }
     void JustEngagedWith(Unit* who) override
     {
-        BossAI::JustEngagedWith(who);
         if (InstanceScript* inst = me->GetInstanceScript())
-            if (inst->GetBossState(DATA_WARLORD_ZONOZZ) != DONE) { EnterEvadeMode(); return; }
+            if (!inst->CheckRequiredBosses(DATA_YORSAHJ_THE_UNSLEEPING, who ? who->ToPlayer() : nullptr))
+            {
+                EnterEvadeMode(EVADE_REASON_SEQUENCE_BREAK);
+                return;
+            }
+        BossAI::JustEngagedWith(who);
         Talk(SAY_AGGRO);
         events.ScheduleEvent(EVENT_VOID_BOLT, 8s);
         events.ScheduleEvent(EVENT_CALL_BLOOD, 30s);

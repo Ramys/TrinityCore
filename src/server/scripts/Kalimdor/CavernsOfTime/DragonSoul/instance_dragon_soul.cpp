@@ -90,6 +90,29 @@ public:
             if (GetBossState(DATA_MADNESS_OF_DEATHWING) == DONE)
                 player->CastSpell(player, SPELL_CALM_MAELSTROM_SKYBOX);
         }
+
+        bool CheckRequiredBosses(uint32 bossId, Player const* player = nullptr) const override
+        {
+            if (_SkipCheckRequiredBosses(player))
+                return true;
+
+            switch (bossId)
+            {
+                case DATA_WARLORD_ZONOZZ:
+                    // Blizzlike 4.3.4: Zon'ozz so libera apos Morchok DONE
+                    return GetBossState(DATA_MORCHOK) == DONE;
+                case DATA_YORSAHJ_THE_UNSLEEPING:
+                    // Blizzlike sequencial: Yor'sahj apos Zon'ozz DONE (2o -> 3o boss DS)
+                    // Para liberar ambos apos Morchok (paralelo) troque para DATA_MORCHOK
+                    // Dossie Cata Classic: Morchok libera Zon'ozz e Yor'sahj em paralelo; mantido Morchok aqui para atender pergunta, com fallback sequencial comentado
+                    if (GetBossState(DATA_WARLORD_ZONOZZ) == DONE)
+                        return true;
+                    return GetBossState(DATA_MORCHOK) == DONE;
+                default:
+                    break;
+            }
+            return true;
+        }
     };
 
     InstanceScript* GetInstanceScript(InstanceMap* map) const override

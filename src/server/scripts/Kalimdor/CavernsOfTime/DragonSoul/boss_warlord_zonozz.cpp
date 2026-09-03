@@ -1,4 +1,4 @@
-﻿/*
+/*
  * TrinityCore 4.3.4 - Dragon Soul: Warlord Zon'ozz 55308
  * Dossie Cataclysm Classic 4.3.4: 68M 10N /86M 10H /204M 25N /260M 25H, Enrage 6min 26662
  * Ref: wowhead cata 55308, 55334 Void, 57877 Flail/55417, 55416/57875 Eye, 55418 Claw
@@ -197,11 +197,11 @@ struct boss_warlord_zonozz : public BossAI
         _bIntro = true;
     }
 
-    void JustEngagedWith(Unit*) override
+    void JustEngagedWith(Unit* who) override
     {
-        if (instance && instance->GetBossState(DATA_MORCHOK) != DONE)
+        if (instance && !instance->CheckRequiredBosses(DATA_WARLORD_ZONOZZ, who ? who->ToPlayer() : nullptr))
         {
-            EnterEvadeMode(EVADE_REASON_OTHER);
+            EnterEvadeMode(EVADE_REASON_SEQUENCE_BREAK);
             auto const& pl = me->GetMap()->GetPlayers();
             for (auto const& r : pl)
                 if (Player* p = r.GetSource())
@@ -211,7 +211,7 @@ struct boss_warlord_zonozz : public BossAI
             return;
         }
 
-        BossAI::JustEngagedWith(nullptr);
+        BossAI::JustEngagedWith(who);
         if (instance)
             instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
         if (auto* m = me->GetMap())
