@@ -1,23 +1,22 @@
 ﻿/*
- * TrinityCore 4.3.4 - Dragon Soul: Warlord Zon'ozz
- * Port MoP 5.4.8 725 -> Cata 4.3.4
- * Ref: wowhead cata 55308, EJ 4.3.4, Spell.dbc Cataclysm Preservation Project
+ * TrinityCore 4.3.4 - Dragon Soul: Warlord Zon'ozz 55308
+ * Dossie Cataclysm Classic 4.3.4: 68M 10N /86M 10H /204M 25N /260M 25H, Enrage 6min 26662
+ * Ref: wowhead cata 55308, 55334 Void, 57877 Flail/55417, 55416/57875 Eye, 55418 Claw
+ * Spells: 104543 Focused Anger, 104322 Psychic Drain 166.5-193.5k cone 30° leech 10x,
+ *  103434 Disrupting Shadows 42-48k/2s 20s (1-3 10p /6-8 25p, dispel knockback 10m Heroic),
+ *  103571 Void summon, 104605/103521 Void impact split +20%/bounce, 106836 Void Diffusion Buff,
+ *  104031 Void Diffusion debuff +5%/stack, 108799/108794 Eruption 119.4-120.6k wipe,
+ *  104378 Black Blood 15.2-15.9k/s 30s, 104377 Heroic tentacle aura 3220/2s *addsAlive,
+ *  109391/104347 Shadow Gaze 21.3-23.6k, 109413 Darkness, 103953 Tantrum
  *
  * Encounter flow:
- *   1. Boss spams Focused Anger (+dmg stacks), Psychic Drain (frontal cone heal),
- *      Disrupting Shadows (DoT on players, explodes on dispel).
- *   2. Boss summons Void of the Unmaking every ~90s.
- *   3. Void bounces between players. Each bounce adds stack of Void Diffusion Buff (106836)
- *      on the orb: +20% dmg, +20% size per stack.
- *   4. If Void reaches outer edge: Black Blood Eruption (108799) = 119400-120600 AoE knockup.
- *   5. If Void returns to boss: Void Diffusion debuff (104031) applied = +5% dmg taken per
- *      bounce stack. Focused Anger removed. Boss enters Tantrum phase.
- *   6. Tantrum phase: Boss teleports to center, casts Darkness (109413, visual), Tantrum
- *      (103953, 10s channel). Normal: Black Blood of Go'rath (104378, 15210-15990/s 30s).
- *      Heroic: tentacles spawn (Eyes/Flails/Claws) each applying 104377 (3220/2s).
- *   7. After 30s blood phase ends, boss re-engages. Void respawns after delay.
- *   8. Heroic tentacle counts: 10H=4E/2F/1C, 25H=8E/4F/2C. Normal: Eyes only (non-attackable).
- *   9. Achievement Ping-Pong Champion (worldstate 10019): 9+ bounces in single void.
+ *   1. Focused Anger stack +20% phys +5% speed por stack, reset na interrupcao.
+ *   2. Psychic Drain cone frontal no tank, reduz cura com AMS/Mortal Strike.
+ *   3. Disrupting Shadows DoT, dispel explode heroico 10m knockback.
+ *   4. Void ping-pong: dano dividido, +20% por rebote, CD 5s, parede=erupcao wipe, no boss=interrupcao.
+ *   5. Ao tocar boss: Void Diffusion +5%/stack, remove Focused Anger, Tantrum 30s.
+ *   6. Interrupcao 30s: 10p 8 adds (5E/2F/1C) /25p 14 adds (8E/4F/2C) heroic; Normal sem aura stack.
+ *   7. Achievement Ping Pong Champion 6128: 10 rebotes antes da kill (worldstate 10019).
  */
 #include "dragon_soul.h"
 #include "ScriptedCreature.h"
@@ -76,7 +75,8 @@ enum Spells
     SPELL_SLUDGE_SPEW                    = 110297,
     SPELL_WILD_FLAIL                     = 109199,
     SPELL_OOZE_SPIT                      = 109396,
-    SPELL_SHADOW_GAZE                    = 104347,
+    SPELL_SHADOW_GAZE                    = 104347, // dossiê 109391 variant Cata
+    SPELL_SHADOW_GAZE_109391             = 109391,
     // Whispers
     SPELL_ZONOZZ_WHISPER_AGGRO           = 109874,
     SPELL_ZONOZZ_WHISPER_INTRO           = 109875,
@@ -90,8 +90,11 @@ enum Spells
 enum Adds
 {
     NPC_VOID_OF_THE_UNMAKING = 55334,
+    NPC_VOID_OF_THE_UNMAKING_2 = 58473,
     NPC_EYE_OF_GORATH        = 55416,
-    NPC_FLAIL_OF_GORATH      = 55417,
+    NPC_EYE_OF_GORATH_2      = 57875,
+    NPC_FLAIL_OF_GORATH      = 57877, // dossiê blizzlike (legado 55417 compat)
+    NPC_FLAIL_OF_GORATH_OLD  = 55417,
     NPC_CLAW_OF_GORATH       = 55418,
     NPC_ZONOZZ               = 55308
 };
@@ -219,7 +222,7 @@ struct boss_warlord_zonozz : public BossAI
         Talk(SAY_AGGRO);
         DoCastAOE(SPELL_ZONOZZ_WHISPER_AGGRO, true);
 
-        events.ScheduleEvent(EVENT_BERSERK, 360000);
+        events.ScheduleEvent(EVENT_BERSERK, 360000); // 6min dossiê
         events.ScheduleEvent(EVENT_FOCUSED_ANGER, 10s);
         events.ScheduleEvent(EVENT_PSYCHIC_DRAIN, 13s);
         events.ScheduleEvent(EVENT_DISRUPTING_SHADOWS, 25s);
@@ -238,7 +241,9 @@ struct boss_warlord_zonozz : public BossAI
 
         std::list<Creature*> trash;
         GetCreatureListWithEntryInGrid(trash, me, NPC_EYE_OF_GORATH, 150.0f);
+        GetCreatureListWithEntryInGrid(trash, me, NPC_EYE_OF_GORATH_2, 150.0f);
         GetCreatureListWithEntryInGrid(trash, me, NPC_FLAIL_OF_GORATH, 150.0f);
+        GetCreatureListWithEntryInGrid(trash, me, NPC_FLAIL_OF_GORATH_OLD, 150.0f);
         GetCreatureListWithEntryInGrid(trash, me, NPC_CLAW_OF_GORATH, 150.0f);
         for (Creature* t : trash)
             if (t && t->IsAlive())
@@ -283,9 +288,11 @@ struct boss_warlord_zonozz : public BossAI
         switch (s->GetEntry())
         {
             case NPC_VOID_OF_THE_UNMAKING:
+            case NPC_VOID_OF_THE_UNMAKING_2:
                 s->SetOrientation(me->GetOrientation());
                 break;
             case NPC_EYE_OF_GORATH:
+            case NPC_EYE_OF_GORATH_2:
                 if (!me->GetMap()->IsHeroic())
                 {
                     s->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE);
@@ -294,6 +301,7 @@ struct boss_warlord_zonozz : public BossAI
                 [[fallthrough]];
             case NPC_CLAW_OF_GORATH:
             case NPC_FLAIL_OF_GORATH:
+            case NPC_FLAIL_OF_GORATH_OLD:
                 if (me->GetMap()->IsHeroic())
                     DoCastAOE(SPELL_BLACK_BLOOD_OF_GORATH, true);
                 break;
@@ -304,7 +312,9 @@ struct boss_warlord_zonozz : public BossAI
     void SummonedCreatureDies(Creature* s, Unit*) override
     {
         BossAI::SummonedCreatureDies(s, nullptr);
-        if (s->GetEntry() == NPC_EYE_OF_GORATH || s->GetEntry() == NPC_CLAW_OF_GORATH || s->GetEntry() == NPC_FLAIL_OF_GORATH)
+        if (s->GetEntry() == NPC_EYE_OF_GORATH || s->GetEntry() == NPC_EYE_OF_GORATH_2 ||
+            s->GetEntry() == NPC_CLAW_OF_GORATH || s->GetEntry() == NPC_FLAIL_OF_GORATH ||
+            s->GetEntry() == NPC_FLAIL_OF_GORATH_OLD)
         {
             auto const& pl = me->GetMap()->GetPlayers();
             for (auto const& r : pl)
@@ -354,22 +364,22 @@ struct boss_warlord_zonozz : public BossAI
                 case EVENT_FOCUSED_ANGER: DoCastSelf(SPELL_FOCUSED_ANGER); events.ScheduleEvent(EVENT_FOCUSED_ANGER, 6500ms); break;
                 case EVENT_PSYCHIC_DRAIN: if (Unit* v = me->GetVictim()) DoCast(v, SPELL_PSYCHIC_DRAIN); events.ScheduleEvent(EVENT_PSYCHIC_DRAIN, 20s); break;
                 case EVENT_DISRUPTING_SHADOWS: Talk(SAY_SHADOWS); DoCastAOE(SPELL_DISRUPTING_SHADOWS); DoCastAOE(SPELL_ZONOZZ_WHISPER_SHADOWS, true); events.ScheduleEvent(EVENT_DISRUPTING_SHADOWS, 25s); break;
-                case EVENT_VOID_OF_THE_UNMAKING: summons.DespawnEntry(NPC_VOID_OF_THE_UNMAKING); Talk(SAY_VOID); DoCastSelf(SPELL_VOID_OF_THE_UNMAKING_SUMMON); DoCastAOE(SPELL_ZONOZZ_WHISPER_VOID, true); events.ScheduleEvent(EVENT_VOID_OF_THE_UNMAKING, 90s); break;
+                case EVENT_VOID_OF_THE_UNMAKING: summons.DespawnEntry(NPC_VOID_OF_THE_UNMAKING); summons.DespawnEntry(NPC_VOID_OF_THE_UNMAKING_2); Talk(SAY_VOID); DoCastSelf(SPELL_VOID_OF_THE_UNMAKING_SUMMON); DoCastAOE(SPELL_ZONOZZ_WHISPER_VOID, true); events.ScheduleEvent(EVENT_VOID_OF_THE_UNMAKING, 90s); break;
                 case EVENT_TANTRUM_1: me->SetReactState(REACT_PASSIVE); me->AttackStop(); me->NearTeleportTo(centerPos.GetPositionX(), centerPos.GetPositionY(), centerPos.GetPositionZ(), centerPos.GetOrientation()); events.ScheduleEvent(EVENT_TANTRUM_2, 3s); break;
                 case EVENT_TANTRUM_2:
                 {
                     Talk(SAY_BLOOD); DoCastSelf(SPELL_DARKNESS, true);
                     if (!me->GetMap()->IsHeroic()) DoCastAOE(SPELL_BLACK_BLOOD_OF_GORATH_SELF, true);
                     DoCastSelf(SPELL_TANTRUM); DoCastAOE(SPELL_ZONOZZ_WHISPER_BLOOD, true);
-                    if (me->GetMap()->IsHeroic()) { if (me->GetMap()->Is25ManRaid()) SpawnRandomTentacles(8, 4, 2); else SpawnRandomTentacles(4, 2, 1); }
-                    else { if (me->GetMap()->Is25ManRaid()) SpawnRandomTentacles(8, 0, 0); else SpawnRandomTentacles(4, 0, 0); }
+                    if (me->GetMap()->IsHeroic()) { if (me->GetMap()->Is25ManRaid()) SpawnRandomTentacles(8, 4, 2); else SpawnRandomTentacles(5, 2, 1); } // dossiê 5E/2F/1C 10p 8E/4F/2C 25p
+                    else { if (me->GetMap()->Is25ManRaid()) SpawnRandomTentacles(8, 0, 0); else SpawnRandomTentacles(5, 0, 0); } // normal Eyes only 5/8
                     events.ScheduleEvent(EVENT_END_TANTRUM_1, 11s);
                     events.ScheduleEvent(EVENT_END_TANTRUM_2, 30s);
                     break;
                 }
                 case EVENT_END_TANTRUM_1: me->SetReactState(REACT_AGGRESSIVE); if (Unit* v = me->GetVictim()) AttackStart(v); else if (Unit* t = SelectTarget(SELECT_TARGET_RANDOM, 0)) AttackStart(t); break;
                 case EVENT_END_TANTRUM_2:
-                    if (!me->GetMap()->IsHeroic()) summons.DespawnEntry(NPC_EYE_OF_GORATH); else summons.DespawnAll();
+                    if (!me->GetMap()->IsHeroic()) { summons.DespawnEntry(NPC_EYE_OF_GORATH); summons.DespawnEntry(NPC_EYE_OF_GORATH_2); } else summons.DespawnAll();
                     me->RemoveAurasDueToSpell(SPELL_VOID_OF_THE_UNMAKING_PREV);
                     events.ScheduleEvent(EVENT_VOID_OF_THE_UNMAKING, 13s);
                     events.ScheduleEvent(EVENT_FOCUSED_ANGER, 6s);
@@ -456,7 +466,7 @@ struct npc_warlord_zonozz_void_of_the_unmaking : public ScriptedAI
                     if (pl)
                     {
                         if (Aura const* a = me->GetAura(SPELL_VOID_DIFFUSION_ORB_BUFF))
-                            if (a->GetStackAmount() >= 9)
+                            if (a->GetStackAmount() >= 10) // dossiê 10 rebotes Ping Pong Champion 6128
                                 if (InstanceScript* inst = me->GetInstanceScript())
                                     if (Creature* z = ObjectAccessor::GetCreature(*me, inst->GetGuidData(DATA_WARLORD_ZONOZZ)))
                                         z->AI()->SetData(DATA_ACHIEVE, 1);
@@ -472,8 +482,8 @@ struct npc_warlord_zonozz_void_of_the_unmaking : public ScriptedAI
                         if (me->NormalizeOrientation(me->GetOrientation() - ang) < (M_PI / 4.0f))
                             ang = me->GetOrientation();
                         _MovePosition(200.0f, ang + float(M_PI));
-                        _events.ScheduleEvent(EVENT_UPDATE_AURA, 4s);
-                        _events.ScheduleEvent(EVENT_CHECK_DISTANCE, 4s);
+                        _events.ScheduleEvent(EVENT_UPDATE_AURA, 5s); // dossiê CD 5s entre rebotes
+                        _events.ScheduleEvent(EVENT_CHECK_DISTANCE, 5s); // dossiê 5s cooldown rebote
                     }
                     else if (Creature* z = me->FindNearestCreature(NPC_ZONOZZ, 5.0f))
                     {
@@ -540,9 +550,11 @@ struct npc_warlord_zonozz_tentacle : public ScriptedAI
     {
         switch (me->GetEntry())
         {
-            case NPC_FLAIL_OF_GORATH: _events.ScheduleEvent(EVENT_SLUDGE_SPEW, 10s); _events.ScheduleEvent(EVENT_WILD_FLAIL, 15s); break;
+            case NPC_FLAIL_OF_GORATH:
+            case NPC_FLAIL_OF_GORATH_OLD: _events.ScheduleEvent(EVENT_SLUDGE_SPEW, 10s); _events.ScheduleEvent(EVENT_WILD_FLAIL, 15s); break;
             case NPC_CLAW_OF_GORATH: _events.ScheduleEvent(EVENT_OOZE_SPIT, 8s); break;
-            case NPC_EYE_OF_GORATH: _events.ScheduleEvent(EVENT_SHADOW_GAZE, 3s); break;
+            case NPC_EYE_OF_GORATH:
+            case NPC_EYE_OF_GORATH_2: _events.ScheduleEvent(EVENT_SHADOW_GAZE, 3s); break;
             default: break;
         }
     }
@@ -561,7 +573,7 @@ struct npc_warlord_zonozz_tentacle : public ScriptedAI
                 default: break;
             }
         }
-        if (me->GetEntry() != NPC_EYE_OF_GORATH) DoMeleeAttackIfReady();
+        if (me->GetEntry() != NPC_EYE_OF_GORATH && me->GetEntry() != NPC_EYE_OF_GORATH_2) DoMeleeAttackIfReady();
     }
 };
 

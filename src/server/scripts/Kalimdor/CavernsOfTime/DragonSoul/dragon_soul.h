@@ -59,6 +59,13 @@ enum DSCreatures
     NPC_KOHCROM                                 = 57773, // Kohcrom (gemeo do Morchok, Heroico). Entry real confirmado em creature_template (lvl 88, rank boss).
     NPC_RESONATING_CRYSTAL                      = 55346, // Resonating Crystal (cristal invocado pelo 103640). Entry confirmado em creature_template (lvl 88).
     NPC_WARLORD_ZONOZZ                          = 55308, // Warlord Zon'ozz - 2o boss DS, gateado por Morchok DONE
+    NPC_VOID_OF_THE_UNMAKING                    = 55334, // Void of the Unmaking orb - dossiê 55334 (variante 58473 model 11686)
+    NPC_VOID_OF_THE_UNMAKING_2                  = 58473, // variante LFR/heroic
+    NPC_EYE_OF_GORATH                           = 55416, // Eye of Go'rath - dossiê 55416 (variante 57875)
+    NPC_EYE_OF_GORATH_2                         = 57875, // variante heroica
+    NPC_FLAIL_OF_GORATH                         = 57877, // Flail - dossiê 57877 (legado 55417 compat)
+    NPC_FLAIL_OF_GORATH_OLD                     = 55417, // alias legado MoP port
+    NPC_CLAW_OF_GORATH                          = 55418, // Claw - dossiê 55418
     NPC_YORSAHJ_THE_UNSLEEPING                  = 55312, // Yor'sahj the Unsleeping - 3o boss DS, gateado por Zon'ozz DONE
     // Yor'sahj adds
     NPC_MANA_VOID                               = 56231, // Mana Void - azul (Cobalt) - DBC summon 105530
