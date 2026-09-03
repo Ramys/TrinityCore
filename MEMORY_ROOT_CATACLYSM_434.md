@@ -204,6 +204,24 @@ void DoEffectCalcDamageAndHealing(AuraEffect const* aurEff, Unit* victim,
     int32& damageOrHealing, int32& flatMod, float& pctMod)
 ```
 
+### 3.14 Position::m_orientation privado
+`Position::m_orientation` é `private` (`Position.h:58`). Acesso direto não compila.
+```cpp
+// ERRADO:
+float o = pos.m_orientation; pos.m_orientation = 3.14f;
+// CORRETO:
+float o = pos.GetOrientation(); pos.SetOrientation(3.14f);
+Position p; p.Relocate(x, y, z, o);
+```
+
+### 3.15 ThreatManager::AddThreat (sem Creature::AddThreat)
+`Creature` NÃO tem `AddThreat`. Usar `ThreatManager` via `Unit::GetThreatManager()` (`Unit.h:981`, `ThreatManager.h:377`).
+```cpp
+// ERRADO: creature->AddThreat(target, 10.0f);
+// CORRETO:
+creature->GetThreatManager().AddThreat(target, 10.0f, nullptr, true, true);
+```
+
 ---
 
 ## 4. Conteudo Nao-Cata

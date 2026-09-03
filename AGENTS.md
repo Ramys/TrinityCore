@@ -103,7 +103,7 @@ Para evitar "invenções" e manter a integridade do projeto, os agentes devem **
 | [Issue Tracker](https://github.com/Ramys/TrinityCore/issues) | Reportar e verificar problemas |
 | [Pull Requests](https://github.com/Ramys/TrinityCore/pulls) | Submeter e revisar correções |
 | [Wiki do TrinityCore](https://www.trinitycore.org/) | Documentação geral do projeto |
-| [MEMORY_ROOT_CATACLYSM_434.md](MEMORY_ROOT_CATACLYSM_434.md) | Referencia de APIs/gotchas 4.3.4 (EventMap, SpellScript, InstanceScript, SelectTarget 6-param, MINDISTANCE, DoEffectCalcDamageAndHealing, near/far macros) |
+| [MEMORY_ROOT_CATACLYSM_434.md](MEMORY_ROOT_CATACLYSM_434.md) | Referencia de APIs/gotchas 4.3.4 (EventMap, SpellScript, InstanceScript, SelectTarget 6-param, MINDISTANCE, DoEffectCalcDamageAndHealing, near/far macros, Position::m_orientation private, ThreatManager::AddThreat) |
 
 ---
 

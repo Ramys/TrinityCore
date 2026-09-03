@@ -1618,6 +1618,36 @@ for (Player* player : playerList)
 - NUNCA declare variáveis com nome `near` ou `far` (ex.: `std::list<Player*> near;` vira `std::list<Player*> ;` e quebra o parser C++).
 - Use `nearList`, `nearPlayers` ou `nearby`.
 
+### 15.9 Position::m_orientation privado
+- `Position::m_orientation` é `private` (`Position.h:58`). Acesso direto `pos.m_orientation` / `pos->m_orientation` não compila.
+- Use `GetOrientation()` / `SetOrientation(float)` / `Relocate(x,y,z,o)`:
+```cpp
+// ERRADO (não compila):
+float o = pos.m_orientation;
+pos.m_orientation = 3.14f;
+Position p; p.m_positionX = x; p.m_positionY = y; p.m_positionZ = z; p.m_orientation = o;
+// CORRETO (4.3.4):
+float o = pos.GetOrientation();
+pos.SetOrientation(o);
+Position p; p.Relocate(x, y, z, o);
+```
+- `m_positionX/Y/Z` continuam `public`; só `m_orientation` é privado para garantir `NormalizeOrientation()`.
+
+### 15.10 ThreatManager::AddThreat (sem Creature::AddThreat)
+- `Creature` NÃO possui `AddThreat`. API movida para `ThreatManager` via `Unit::GetThreatManager()` (`Unit.h:981`).
+- Assinatura (`ThreatManager.h:377`): `void ThreatManager::AddThreat(Unit* target, float amount, SpellInfo const* spell, bool ignoreModifiers, bool ignoreRedirects);`
+```cpp
+// ERRADO (C2091: não é membro de Creature):
+creature->AddThreat(target, 10.0f);
+s->AddThreat(t, 1000000.0f);
+// CORRETO (4.3.4):
+creature->GetThreatManager().AddThreat(target, 10.0f, nullptr, true, true);
+s->GetThreatManager().AddThreat(t, 1000000.0f, nullptr, true, true);
+// Em ScriptedAI pode usar helper:
+AddThreat(victim, amount); // ScriptedCreature.cpp:205 -> who->GetThreatManager().AddThreat(...)
+```
+- `ThreatReference::AddThreat(float)` e `ThreatManager::AddThreat` são internos; não chamar `ref->AddThreat` fora de `ThreatManager.cpp`.
+
 ---
 
 ## REGRA SUPREMA: FIEL
