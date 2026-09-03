@@ -48,7 +48,8 @@ enum Spells
     SPELL_FURIOUS                   = 103846, // +20% dmg & +20% atk speed at 20% HP
     SPELL_EARTHEN_VORTEX            = 103821, // Pulls all players to boss & slows 50%
     SPELL_FALLING_FRAGMENTS         = 103176, // Channeled 5s, creates stone pillars for LoS
-    SPELL_BLACK_BLOOD_OF_THE_EARTH  = 103785, // 5k Nature + 100% taken stack 6s
+    SPELL_BLACK_BLOOD_OF_THE_EARTH  = 103785, // 5k Nature + 100% taken stack 6s (triggered)
+    SPELL_BLACK_BLOOD_CHANNEL       = 103851, // Channel 2s/15s, periodic trigger 103785 cada 1s - visual 21755
     SPELL_SUMMON_KOHCROM            = 109017, // Summon Kohcrom
     SPELL_MORCHOK_JUMP              = 109070  // Visual jump at 90%
 };
@@ -395,7 +396,14 @@ struct boss_morchok : public BossAI
                 case EVENT_BLACK_BLOOD:
                 {
                     Talk(SAY_GROUND2);
-                    DoCastSelf(SPELL_BLACK_BLOOD_OF_THE_EARTH);
+                    // DBC: 103851 canaliza 15s (cast 2s, dur 15s) com trigger 103785 a cada 1s. Visual 21755 = 345/181/3377
+                    // 103785 e o dano instant 6s (visual 21778 impact 702) disparado pelo canal. Cast direto de 103785 fica sem visual de canal.
+                    if (DoCastSelf(SPELL_BLACK_BLOOD_CHANNEL) == SPELL_CAST_OK)
+                    {
+                        // fallback: se canal falhar (imunidade/interrupt), garante dano via 103785
+                    }
+                    else
+                        DoCastSelf(SPELL_BLACK_BLOOD_OF_THE_EARTH);
                     if (_kohcrom && _kohcrom->IsAlive())
                         _kohcrom->AI()->DoAction(ACTION_KOHCROM_BLACK_BLOOD);
                     events.ScheduleEvent(EVENT_BLACK_BLOOD_END, 17s, 0, PHASE_BLACK_BLOOD);
@@ -472,7 +480,8 @@ struct npc_morchok_kohcrom : public BossAI
         }
         else if (action == ACTION_KOHCROM_BLACK_BLOOD)
         {
-            DoCastSelf(SPELL_BLACK_BLOOD_OF_THE_EARTH);
+            if (DoCastSelf(SPELL_BLACK_BLOOD_CHANNEL) != SPELL_CAST_OK)
+                DoCastSelf(SPELL_BLACK_BLOOD_OF_THE_EARTH);
         }
     }
 
