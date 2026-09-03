@@ -270,6 +270,15 @@ struct boss_morchok : public BossAI
 
     void DamageTaken(Unit* attacker, uint32& damage) override
     {
+        // FIX: Força a morte no modo Normal
+        if (!_isHeroic && me->GetHealth() <= damage)
+        {
+            me->SetHealth(0);
+            me->setDeathState(JUST_DIED);
+            JustDied(nullptr);
+            return;
+        }
+
         if (!me->IsAlive())
             return;
 
@@ -439,7 +448,7 @@ struct boss_morchok : public BossAI
 
 struct npc_morchok_kohcrom : public BossAI
 {
-    npc_morchok_kohcrom(Creature* creature) : BossAI(creature, DATA_KOHCROM), _twin(nullptr)
+    npc_morchok_kohcrom(Creature* creature) : BossAI(creature, DATA_KOHCROM), _twin(nullptr), _isHeroic(false)
     {
         me->ApplySpellImmune(0, IMMUNITY_EFFECT, SPELL_EFFECT_KNOCK_BACK, true);
         me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_GRIP, true);
@@ -450,10 +459,12 @@ struct npc_morchok_kohcrom : public BossAI
     }
 
     Creature* _twin;
+    bool _isHeroic;
 
     void Reset() override
     {
         _Reset();
+        _isHeroic = me->GetMap()->IsHeroic();
         if (!_twin && instance)
             _twin = instance->GetCreature(DATA_MORCHOK);
     }
@@ -495,6 +506,15 @@ struct npc_morchok_kohcrom : public BossAI
 
     void DamageTaken(Unit* attacker, uint32& damage) override
     {
+        // FIX: Força a morte no modo Normal
+        if (!_isHeroic && me->GetHealth() <= damage)
+        {
+            me->SetHealth(0);
+            me->setDeathState(JUST_DIED);
+            JustDied(nullptr);
+            return;
+        }
+
         if (!me->IsAlive())
             return;
 
