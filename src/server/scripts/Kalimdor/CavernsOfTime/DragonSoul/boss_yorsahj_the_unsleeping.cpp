@@ -20,6 +20,7 @@
 #include "Map.h"
 #include "Containers.h"
 #include <vector>
+#include <algorithm>
 namespace DragonSoul::Yorsahj
 {
 enum Texts { SAY_AGGRO=0, SAY_DEATH=1, SAY_INTRO=2, SAY_KILL=3, SAY_GLOBULE=4, SAY_BERSERK=5 };
@@ -58,6 +59,14 @@ enum Events
     EVENT_DIGESTIVE_ACID        = 6
 };
 enum Actions { ACTION_GLOBULE_REACHED=1, ACTION_GLOBULE_DIED=2 };
+enum WorldStates
+{
+    // Taste the Rainbow! 6129 - DBC Achievement_Criteria 18495-18498 RequiredWorldStateID 6221-6224 ==1
+    WORLDSTATE_TASTE_RAINBOW_BLACK_YELLOW  = 6221, // Black and Yellow - DARK 55867 + GLOWING 55864
+    WORLDSTATE_TASTE_RAINBOW_RED_GREEN     = 6222, // Red and Green - CRIMSON 55865 + ACIDIC 55862
+    WORLDSTATE_TASTE_RAINBOW_BLACK_BLUE    = 6223, // Black and Blue - DARK 55867 + COBALT 55866
+    WORLDSTATE_TASTE_RAINBOW_PURPLE_YELLOW = 6224  // Purple and Yellow - SHADOWED 55863 + GLOWING 55864
+};
 enum Points { POINT_BOSS=1 };
 static uint32 const GLOBULE_ENTRIES[6]={ NPC_GLOBULE_ACIDIC, NPC_GLOBULE_SHADOWED, NPC_GLOBULE_GLOWING, NPC_GLOBULE_CRIMSON, NPC_GLOBULE_COBALT, NPC_GLOBULE_DARK };
 // Combinações blizzlike por dificuldade (dossiê seção 5.1/5.2)
@@ -93,6 +102,13 @@ struct boss_yorsahj_the_unsleeping : public BossAI
         RemoveBloodAuras();
         events.Reset();
         summons.DespawnAll();
+        if (Map* map = me->GetMap())
+        {
+            map->SetWorldStateValue(WORLDSTATE_TASTE_RAINBOW_BLACK_YELLOW, 0, false);
+            map->SetWorldStateValue(WORLDSTATE_TASTE_RAINBOW_RED_GREEN, 0, false);
+            map->SetWorldStateValue(WORLDSTATE_TASTE_RAINBOW_BLACK_BLUE, 0, false);
+            map->SetWorldStateValue(WORLDSTATE_TASTE_RAINBOW_PURPLE_YELLOW, 0, false);
+        }
     }
     void JustEngagedWith(Unit* who) override
     {
@@ -305,6 +321,52 @@ private:
     }
     void ApplyBuffs()
     {
+        // Taste the Rainbow tracking: each absorbed combo sets required worldstate for 6129
+        {
+            std::vector<uint32> allAbsorbed;
+            // Merge exactly what will be applied as buffs (same logic as toApply below)
+            // 1) absorbed via reaching boss
+            for (uint32 e : _absorbedEntries) allAbsorbed.push_back(e);
+            // 2) fallback remainder not killed
+            if (allAbsorbed.size() < _waveEntries.size())
+            {
+                uint32 waveRemain = _waveEntries.size() > (_reached + _deadCount) ? uint32(_waveEntries.size() - (_reached + _deadCount)) : 0;
+                // toApply fallback already covers case allAbsorbed empty; mirror that
+                if (allAbsorbed.empty() && !_waveEntries.empty())
+                {
+                    uint32 applyCount = _expected > _deadCount ? _expected - _deadCount : 0;
+                    for (uint32 i = 0; i < applyCount && i < _waveEntries.size(); ++i)
+                        if (std::find(allAbsorbed.begin(), allAbsorbed.end(), _waveEntries[i + _deadCount]) == allAbsorbed.end())
+                            allAbsorbed.push_back(_waveEntries[i + _deadCount]);
+                }
+                else
+                {
+                    for (uint32 i = 0; i < waveRemain; ++i)
+                    {
+                        uint32 e = _waveEntries[_reached + _deadCount + i];
+                        if (std::find(allAbsorbed.begin(), allAbsorbed.end(), e) == allAbsorbed.end())
+                            allAbsorbed.push_back(e);
+                    }
+                }
+            }
+            bool hasBlack=false, hasYellow=false, hasRed=false, hasGreen=false, hasBlue=false, hasPurple=false;
+            for (uint32 e : allAbsorbed)
+            {
+                if (e==NPC_GLOBULE_DARK) hasBlack=true;
+                if (e==NPC_GLOBULE_GLOWING) hasYellow=true;
+                if (e==NPC_GLOBULE_CRIMSON) hasRed=true;
+                if (e==NPC_GLOBULE_ACIDIC) hasGreen=true;
+                if (e==NPC_GLOBULE_COBALT) hasBlue=true;
+                if (e==NPC_GLOBULE_SHADOWED) hasPurple=true;
+            }
+            if (Map* map = me->GetMap())
+            {
+                if (hasBlack && hasYellow) map->SetWorldStateValue(WORLDSTATE_TASTE_RAINBOW_BLACK_YELLOW, 1, false);
+                if (hasRed && hasGreen) map->SetWorldStateValue(WORLDSTATE_TASTE_RAINBOW_RED_GREEN, 1, false);
+                if (hasBlack && hasBlue) map->SetWorldStateValue(WORLDSTATE_TASTE_RAINBOW_BLACK_BLUE, 1, false);
+                if (hasPurple && hasYellow) map->SetWorldStateValue(WORLDSTATE_TASTE_RAINBOW_PURPLE_YELLOW, 1, false);
+            }
+        }
         std::vector<uint32> toApply = _absorbedEntries;
         if (toApply.empty() && !_waveEntries.empty())
         {

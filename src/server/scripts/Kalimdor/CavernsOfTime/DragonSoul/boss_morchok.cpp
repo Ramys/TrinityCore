@@ -92,7 +92,8 @@ enum DataMisc
 
 enum WorldStates
 {
-    WORLDSTATE_DONT_STAND_SO_CLOSE = 10003
+    // DBC Achievement_Criteria 18607 (Ach 6174 Don't Stand So Close) RequiredWorldStateID 6269 == 0 for success
+    WORLDSTATE_DONT_STAND_SO_CLOSE = 6269
 };
 
 struct boss_morchok : public BossAI
@@ -137,7 +138,7 @@ struct boss_morchok : public BossAI
         {
             instance->SetBossState(DATA_MORCHOK, NOT_STARTED);
             if (auto* map = me->GetMap())
-                map->SetWorldStateValue(WORLDSTATE_DONT_STAND_SO_CLOSE, 1, false);
+                map->SetWorldStateValue(WORLDSTATE_DONT_STAND_SO_CLOSE, 0, false);
         }
     }
 
@@ -223,7 +224,7 @@ struct boss_morchok : public BossAI
     {
         if (type == DATA_ALLOW_ACHIEV)
             if (auto* map = me->GetMap())
-                map->SetWorldStateValue(WORLDSTATE_DONT_STAND_SO_CLOSE, 0, false);
+                map->SetWorldStateValue(WORLDSTATE_DONT_STAND_SO_CLOSE, 1, false);
         (void)data;
     }
 

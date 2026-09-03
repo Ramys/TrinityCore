@@ -125,7 +125,8 @@ enum DataMisc
 };
 enum WorldStates
 {
-    WORLDSTATE_PING_PONG_CHAMPION = 10019
+    // DBC Achievement_Criteria 18494 (Ach 6128 Ping Pong Champion) RequiredWorldStateID 6218 ==1
+    WORLDSTATE_PING_PONG_CHAMPION = 6218
 };
 const Position centerPos = { -1769.329956f, -1916.869995f, -226.28f, 0.0f };
 const Position tentaclePos[14] =
