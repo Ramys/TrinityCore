@@ -148,7 +148,7 @@ struct boss_yorsahj_the_unsleeping : public BossAI
                 if (Unit* t = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
                 {
                     s->AI()->AttackStart(t);
-                    s->AddThreat(t, 1000000.0f);
+                    s->GetThreatManager().AddThreat(t, 1000000.0f, nullptr, true, true);
                     s->CastSpell(t, SPELL_FIXATE, true);
                 }
                 break;
@@ -313,10 +313,7 @@ private:
         float angle = angleDeg * float(M_PI) / 180.0f + frand(-0.15f, 0.15f);
         float dist = 35.0f + frand(0.0f, 5.0f);
         Position p;
-        p.m_positionX = me->GetPositionX() + dist * std::cos(angle);
-        p.m_positionY = me->GetPositionY() + dist * std::sin(angle);
-        p.m_positionZ = me->GetPositionZ();
-        p.m_orientation = 0.0f;
+        p.Relocate(me->GetPositionX() + dist * std::cos(angle), me->GetPositionY() + dist * std::sin(angle), me->GetPositionZ(), 0.0f);
         return p;
     }
     void ApplyBuffs()
