@@ -164,7 +164,7 @@ struct boss_morchok : public BossAI
         _stompGuid2 = ObjectGuid::Empty;
     }
 
-    void JustDied(Unit* /*killer*/) override
+    void JustDied(Unit* killer) override
     {
         _JustDied();
         Talk(SAY_DEATH);
@@ -174,7 +174,12 @@ struct boss_morchok : public BossAI
             instance->SetBossState(DATA_MORCHOK, DONE);
         }
         if (_kohcrom && _kohcrom->IsAlive())
-            Unit::Kill(me, _kohcrom, false);
+        {
+            if (killer)
+                Unit::Kill(killer, _kohcrom, false);
+            else
+                Unit::Kill(me, _kohcrom, false);
+        }
     }
 
     void EnterEvadeMode(EvadeReason why) override
@@ -261,20 +266,10 @@ struct boss_morchok : public BossAI
             DoCastSelf(SPELL_MORCHOK_JUMP, true);
     }
 
-    void DamageTaken(Unit* /*attacker*/, uint32& damage) override
+    void DamageTaken(Unit* attacker, uint32& damage) override
     {
         if (!me->IsAlive())
             return;
-
-        // FIX Normal: dano letal força morte (evita trava 1 HP por transição/fase)
-        if (!_isHeroic && me->GetHealth() <= damage)
-        {
-            TC_LOG_DEBUG("scripts", "Morchok Normal: lethal {} vs hp {}, forcing JUST_DIED", damage, me->GetHealth());
-            me->SetHealth(0);
-            me->setDeathState(JUST_DIED);
-            JustDied(nullptr);
-            return;
-        }
 
         if (_isHeroic && !_kohcromSummoned && me->HealthBelowPctDamaged(90, damage))
         {
@@ -285,7 +280,7 @@ struct boss_morchok : public BossAI
         if (!me->HasAura(SPELL_FURIOUS) && me->HealthBelowPctDamaged(20, damage))
             DoCastSelf(SPELL_FURIOUS);
 
-        // Shared Health Pool em Heroico
+        // Shared Health Pool em Heroico - espelha dano; em lethal deixa core matar (preserva killer->loot)
         if (_kohcrom && _kohcrom->IsAlive())
         {
             uint32 cur = me->GetHealth();
@@ -296,7 +291,8 @@ struct boss_morchok : public BossAI
             }
             else
             {
-                Unit::Kill(me, _kohcrom, false); // Kohcrom must die with Morchok
+                _kohcrom->SetHealth(1);
+                (void)attacker;
             }
         }
     }
@@ -487,7 +483,7 @@ struct npc_morchok_kohcrom : public BossAI
             _twin = instance->GetCreature(DATA_MORCHOK);
     }
 
-    void DamageTaken(Unit* /*attacker*/, uint32& damage) override
+    void DamageTaken(Unit* attacker, uint32& damage) override
     {
         if (!me->IsAlive())
             return;
@@ -498,7 +494,6 @@ struct npc_morchok_kohcrom : public BossAI
         if (!me->HasAura(SPELL_FURIOUS) && me->HealthBelowPctDamaged(20, damage))
             DoCastSelf(SPELL_FURIOUS);
 
-        // Shared Health Pool em Heroico: espelha dano de Kohcrom -> Morchok
         if (_twin && _twin->IsAlive())
         {
             uint32 cur = me->GetHealth();
@@ -509,16 +504,22 @@ struct npc_morchok_kohcrom : public BossAI
             }
             else
             {
-                Unit::Kill(me, _twin, false); // Morchok must die with Kohcrom
+                _twin->SetHealth(1);
+                (void)attacker;
             }
         }
     }
 
-    void JustDied(Unit* /*killer*/) override
+    void JustDied(Unit* killer) override
     {
         _JustDied();
         if (_twin && _twin->IsAlive())
-            Unit::Kill(me, _twin, false);
+        {
+            if (killer)
+                Unit::Kill(killer, _twin, false);
+            else
+                Unit::Kill(me, _twin, false);
+        }
     }
 
     void EnterEvadeMode(EvadeReason why) override
