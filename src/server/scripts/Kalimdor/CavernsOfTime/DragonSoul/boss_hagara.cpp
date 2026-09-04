@@ -292,6 +292,7 @@ enum Adds
     NPC_BINDING_CRYSTAL       = 56136,
     NPC_ICE_WAVE              = 56104,
     NPC_ICE_LANCE             = 56108,
+    NPC_ICY_TOMB              = 55695,
     NPC_ICICLE                = 57867,
     NPC_CRYSTAL_CONDUCTOR     = 56165,
     NPC_BOUND_LIGHTNING_ELEM  = 56700
