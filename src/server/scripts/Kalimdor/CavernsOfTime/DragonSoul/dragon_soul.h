@@ -77,6 +77,17 @@ enum DSCreatures
     NPC_GLOBULE_COBALT                          = 55866, // Cobalt Globule - azul - Mana Void 105530
     NPC_GLOBULE_DARK                            = 55867, // Dark Globule - preto - Black Blood 104894 + Forgotten One
 
+    // Hagara the Stormbinder - 4o boss DS (gateado por Yor'sahj DONE)
+    // Port do MoP 5.4.8 (Legends-of-Azeroth boss_hagara.cpp). Entries mantidos retail 4.3.4.
+    NPC_HAGARA_THE_STORMBINDER                  = 55689, // boss
+    NPC_ICE_WAVE                                = 56104, // Ice Wave - varredura em circulo na plataforma
+    NPC_ICE_LANCE                               = 56108, // spear visual do Ice Lance (fase normal)
+    NPC_FROZEN_BINDING_CRYSTAL                  = 56136, // Binding Crystal - destrava fase Frozen Tempest
+    NPC_ICY_TOMB                                = 55695, // Ice Tomb - aprisiona player, destruivel
+    NPC_CRYSTAL_CONDUCTOR                       = 56165, // Crystal Conductor - fase Lightning Storm, conduz lightning entre players
+    NPC_BOUND_LIGHTNING_ELEMENTAL               = 56700, // Bound Lightning Elemental - overload nos conduits ao morrer
+    NPC_COLLAPSING_ICICLE                       = 57867, // Icicle - cai sobre players na fase ice
+
     BOSS_MADNESS_OF_DEATHWING                   = 56173,
 
     /*Madness of Deathwing*/
