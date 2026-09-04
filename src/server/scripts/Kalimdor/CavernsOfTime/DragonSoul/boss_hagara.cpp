@@ -503,7 +503,7 @@ public:
                     uint8 i = 0;
                     for (UnitList::const_iterator itr = targets.begin(); itr != targets.end(); ++itr)
                     {
-                        if (Creature* pLance = me->SummonCreature(NPC_ICE_LANCE, icelancePos[i], TEMPSUMMON_TIMED_DESPAWN, 15s))
+                        if (Creature* pLance = me->SummonCreature(NPC_ICE_LANCE, icelancePos[i], TEMPSUMMON_TIMED_DESPAWN, 15000ms))
                             pLance->AI()->SetGUID((*itr)->GetGUID(), DATA_ICE_LANCE_GUID);
                         ++i;
                     }
@@ -564,25 +564,25 @@ public:
                 case EVENT_ICE_WAVE:
                 {
                     Talk(SAY_ICE_WAVE);
-                    if (Creature* pWave = me->SummonCreature(NPC_ICE_WAVE, me->GetPosition(), TEMPSUMMON_TIMED_DESPAWN, 20s))
+                    if (Creature* pWave = me->SummonCreature(NPC_ICE_WAVE, me->GetPosition(), TEMPSUMMON_TIMED_DESPAWN, 20000ms))
                     {
                         pWave->AI()->SetData(DATA_CIRCLE_POINT, 0);
                         pWave->AI()->SetData(DATA_MAIN_WAVE, 1);
                         pWave->GetMotionMaster()->MovePoint(POINT_ICE_WAVE, circlePos[0][0]);
                     }
-                    if (Creature* pWave = me->SummonCreature(NPC_ICE_WAVE, me->GetPosition(), TEMPSUMMON_TIMED_DESPAWN, 20s))
+                    if (Creature* pWave = me->SummonCreature(NPC_ICE_WAVE, me->GetPosition(), TEMPSUMMON_TIMED_DESPAWN, 20000ms))
                     {
                         pWave->AI()->SetData(DATA_CIRCLE_POINT, 5);
                         pWave->AI()->SetData(DATA_MAIN_WAVE, 1);
                         pWave->GetMotionMaster()->MovePoint(POINT_ICE_WAVE, circlePos[5][0]);
                     }
-                    if (Creature* pWave = me->SummonCreature(NPC_ICE_WAVE, me->GetPosition(), TEMPSUMMON_TIMED_DESPAWN, 20s))
+                    if (Creature* pWave = me->SummonCreature(NPC_ICE_WAVE, me->GetPosition(), TEMPSUMMON_TIMED_DESPAWN, 20000ms))
                     {
                         pWave->AI()->SetData(DATA_CIRCLE_POINT, 9);
                         pWave->AI()->SetData(DATA_MAIN_WAVE, 1);
                         pWave->GetMotionMaster()->MovePoint(POINT_ICE_WAVE, circlePos[9][0]);
                     }
-                    if (Creature* pWave = me->SummonCreature(NPC_ICE_WAVE, me->GetPosition(), TEMPSUMMON_TIMED_DESPAWN, 20s))
+                    if (Creature* pWave = me->SummonCreature(NPC_ICE_WAVE, me->GetPosition(), TEMPSUMMON_TIMED_DESPAWN, 20000ms))
                     {
                         pWave->AI()->SetData(DATA_CIRCLE_POINT, 14);
                         pWave->AI()->SetData(DATA_MAIN_WAVE, 1);
@@ -756,7 +756,7 @@ private:
     {
         if (circlePosition >= 17)
             circlePosition = 0;
-        if (Creature* pWave = me->SummonCreature(NPC_ICE_WAVE, circlePos[circlePosition][0], TEMPSUMMON_TIMED_DESPAWN, 20s))
+        if (Creature* pWave = me->SummonCreature(NPC_ICE_WAVE, circlePos[circlePosition][0], TEMPSUMMON_TIMED_DESPAWN, 20000ms))
         {
             pWave->AI()->SetData(DATA_CIRCLE_POINT, circlePosition);
             pWave->AI()->SetData(DATA_MAIN_WAVE, _mainWave ? 1 : 0);
