@@ -340,6 +340,11 @@ public:
 
     void JustEngagedWith(Unit* who) override
     {
+        if (instance && !instance->CheckRequiredBosses(DATA_HAGARA_THE_STORMBINDER, who ? who->ToPlayer() : nullptr))
+        {
+            EnterEvadeMode(EVADE_REASON_SEQUENCE_BREAK);
+            return;
+        }
         BossAI::JustEngagedWith(who);
         me->SetInCombatWithZone();
         if (instance)
