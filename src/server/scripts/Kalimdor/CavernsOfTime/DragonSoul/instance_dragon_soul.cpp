@@ -74,6 +74,8 @@ public:
                 case NPC_KOHCROM:
                 case NPC_WARLORD_ZONOZZ:
                 case NPC_YORSAHJ_THE_UNSLEEPING:
+                case NPC_VALEERA:
+                case NPC_EIENDORMI:
                 case NPC_YSERA_MADNESS_OF_DEATHWING:
                 case NPC_ALEXSTRASZA_MADNESS_OF_DEATHWING:
                 case NPC_NOZDORMU_MADNESS_OF_DEATHWING:

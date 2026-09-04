@@ -54,6 +54,7 @@ void AddSC_instance_end_time();
 void AddSC_instance_well_of_eternity();      //CoT Well of Eternity
 void AddSC_instance_hour_of_twilight();      //CoT Hour of Twilight
 void AddSC_instance_dragon_soul();           //CoT Dragon Soul
+void AddSC_dragon_soul();                    //CoT Dragon Soul - npc_dragon_soul_teleport (taxis drakes 57289/57288)
 void AddSC_boss_morchok();                   //CoT Dragon Soul
 void AddSC_boss_warlord_zonozz();            //CoT Dragon Soul - Warlord Zon'ozz 55308 (gateado por Morchok DONE)
 void AddSC_boss_yorsahj_the_unsleeping();     //CoT Dragon Soul - Yor'sahj the Unsleeping 55312 (gateado por Zon'ozz DONE)
@@ -197,6 +198,7 @@ void AddKalimdorScripts()
     AddSC_instance_well_of_eternity();      //CoT Well of Eternity
     AddSC_instance_hour_of_twilight();      //CoT Hour of Twilight
     AddSC_instance_dragon_soul();           //CoT Dragon Soul
+    AddSC_dragon_soul();                    //CoT Dragon Soul - npc_dragon_soul_teleport (taxis drakes 57289/57288)
     AddSC_boss_morchok();                   //CoT Dragon Soul
     AddSC_boss_warlord_zonozz();            //CoT Dragon Soul - Warlord Zon'ozz 55308
     AddSC_boss_yorsahj_the_unsleeping();     //CoT Dragon Soul - Yor'sahj 55312

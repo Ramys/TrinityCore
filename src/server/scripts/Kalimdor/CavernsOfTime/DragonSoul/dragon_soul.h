@@ -101,7 +101,11 @@ enum DSCreatures
     NPC_YSERA_MADNESS_OF_DEATHWING              = 56100,
     NPC_ALEXSTRASZA_MADNESS_OF_DEATHWING        = 56099,
     NPC_NOZDORMU_MADNESS_OF_DEATHWING           = 56102,
-    NPC_KALECGOS_MADNESS_OF_DEATHWING           = 56101
+    NPC_KALECGOS_MADNESS_OF_DEATHWING           = 56101,
+
+    // Dragon Soul - Darkhounds (taxis voadores p/ arenas) - port do 5.4.8
+    NPC_VALEERA                                 = 57289, // Taxi drake -> Zon'ozz (map 967)
+    NPC_EIENDORMI                               = 57288  // Taxi drake -> Yor'sahj (map 967)
 };
 
 enum DSGameObjectIds
@@ -140,6 +144,32 @@ AI* GetDragonSoulAI(Creature* creature)
 }
 
 #define RegisterDragonSoulCreatureAI(ai_name) RegisterCreatureAIWithFactory(ai_name, GetDragonSoulAI)
+
+enum DragonSoulPortals
+{
+    PORTAL_VALEERA    = 0, // Valeera (57289) -> Zon'ozz
+    PORTAL_EIENDORMI  = 1  // Eiendormi (57288) -> Yor'sahj
+};
+
+// Coords taxi drakes (map 967) - port do 5.4.8 (dragon_soul.cpp)
+// Nome taxado taxi* para nao colidir com 'portalsPos' ja definido em boss_warlord_zonozz.cpp (mesmo namespace DragonSoul).
+// [0] Zon'ozz, [1] Yor'sahj
+Position const taxiPortalsPos[] =
+{
+    { -1743.6478f, -1835.1325f, -220.509f, 4.53f },
+    { -1854.2331f, -3068.6586f, -178.339f, 0.46f }
+};
+
+uint32 const GetPortalForEntry(uint32 entry)
+{
+    switch (entry)
+    {
+        case NPC_VALEERA:   return PORTAL_VALEERA;   // -> Zon'ozz
+        case NPC_EIENDORMI: return PORTAL_EIENDORMI; // -> Yor'sahj
+        default:            break;
+    }
+    return 0;
+}
 }
 
 #endif // DEF_DRAGONSOUL_H
