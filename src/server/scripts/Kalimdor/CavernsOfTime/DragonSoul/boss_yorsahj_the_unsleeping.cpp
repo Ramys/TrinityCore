@@ -474,16 +474,40 @@ struct npc_yorsahj_mana_void : public ScriptedAI
 
 struct npc_yorsahj_forgotten_one : public ScriptedAI
 {
-    npc_yorsahj_forgotten_one(Creature* c) : ScriptedAI(c) { _timer = 8000; }
-    void Reset() override { _timer = 8000; }
-    void JustEngagedWith(Unit*) override { _timer = 6000; }
+    npc_yorsahj_forgotten_one(Creature* c) : ScriptedAI(c) { _timer = 8000; _fixateTimer = 1000; }
+    void Reset() override { _timer = 8000; _fixateTimer = 500; }
+    void IsSummonedBy(Unit* /*summoner*/) override
+    {
+        // Fixate imediato blizzlike - Forgotten One fixa alvo aleatorio ao nascer
+        _fixateTimer = 500;
+    }
+    void JustEngagedWith(Unit*) override { _timer = 6000; DoFixate(); }
+    void DoFixate()
+    {
+        if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, 100.0f, true))
+        {
+            me->GetThreatManager().ResetAllThreat();
+            me->AddThreat(target, 500000.0f);
+            me->TauntApply(target);
+            DoCast(target, SPELL_FIXATE, true);
+        }
+    }
     void UpdateAI(uint32 diff) override
     {
         if (!UpdateVictim()) return;
+        if (_fixateTimer <= diff)
+        {
+            // Refixate se vitima morta/sem alvo valido - retain retail behavior
+            if (!me->GetVictim() || !me->GetVictim()->IsAlive() || me->GetVictim()->HasAuraType(SPELL_AURA_MOD_TAUNT))
+                DoFixate();
+            _fixateTimer = 8000;
+        }
+        else
+            _fixateTimer -= diff;
         if (_timer <= diff) { if(Unit* t=me->GetVictim()) DoCast(t, SPELL_PSYCHIC_SLICE); _timer = 12000; } else _timer -= diff;
         DoMeleeAttackIfReady();
     }
-private: uint32 _timer;
+private: uint32 _timer; uint32 _fixateTimer;
 };
 
 struct spell_yorsahj_deep_corruption : public AuraScript
