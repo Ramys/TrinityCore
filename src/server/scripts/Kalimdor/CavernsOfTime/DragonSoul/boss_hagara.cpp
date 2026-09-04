@@ -863,3 +863,125 @@ public:
     }
 };
 
+
+class npc_hagara_the_stormbinder_frozen_binding_crystal : public CreatureScript
+{
+public:
+    npc_hagara_the_stormbinder_frozen_binding_crystal() : CreatureScript("npc_hagara_the_stormbinder_frozen_binding_crystal") { }
+
+    struct npc_hagara_the_stormbinder_frozen_binding_crystalAI : public ScriptedAI
+    {
+        npc_hagara_the_stormbinder_frozen_binding_crystalAI(Creature* creature) : ScriptedAI(creature)
+        {
+            me->ApplySpellImmune(0, IMMUNITY_EFFECT, SPELL_EFFECT_KNOCK_BACK, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_GRIP, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_STUN, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_FEAR, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_ROOT, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_FREEZE, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_POLYMORPH, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_HORROR, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_SAPPED, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_CHARM, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_DISORIENTED, true);
+            me->ApplySpellImmune(0, IMMUNITY_STATE, SPELL_AURA_MOD_CONFUSE, true);
+            me->SetReactState(REACT_PASSIVE);
+            _instance = me->GetInstanceScript();
+            SetCombatMovement(false);
+        }
+
+        void JustDied(Unit* /*killer*/) override
+        {
+            DoCastSelf(SPELL_CRYSTALLINE_OVERLOAD_1, true);
+
+            if (_instance)
+                if (Creature* pHagara = ObjectAccessor::GetCreature(*me, _instance->GetGuidData(DATA_HAGARA_THE_STORMBINDER)))
+                {
+                    pHagara->RemoveAurasDueToSpell(SPELL_CRYSTALLINE_TETHER_1);
+                    pHagara->AI()->DoAction(ACTION_CRYSTAL_DIED);
+                }
+
+            me->DespawnOrUnsummon(2000);
+        }
+
+    private:
+        InstanceScript* _instance;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return GetDragonSoulAI<npc_hagara_the_stormbinder_frozen_binding_crystalAI>(creature);
+    }
+};
+
+class npc_hagara_the_stormbinder_crystal_conductor : public CreatureScript
+{
+public:
+    npc_hagara_the_stormbinder_crystal_conductor() : CreatureScript("npc_hagara_the_stormbinder_crystal_conductor") { }
+
+    struct npc_hagara_the_stormbinder_crystal_conductorAI : public ScriptedAI
+    {
+        npc_hagara_the_stormbinder_crystal_conductorAI(Creature* creature) : ScriptedAI(creature)
+        {
+            me->ApplySpellImmune(0, IMMUNITY_EFFECT, SPELL_EFFECT_KNOCK_BACK, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_GRIP, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_STUN, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_FEAR, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_ROOT, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_FREEZE, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_POLYMORPH, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_HORROR, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_SAPPED, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_CHARM, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_DISORIENTED, true);
+            me->ApplySpellImmune(0, IMMUNITY_STATE, SPELL_AURA_MOD_CONFUSE, true);
+            me->SetReactState(REACT_PASSIVE);
+            _instance = me->GetInstanceScript();
+            _overloaded = false;
+            SetCombatMovement(false);
+        }
+
+        void SpellHit(Unit* caster, const SpellInfo* spell) override
+        {
+            if ((spell->Id == SPELL_OVERLOAD_2 || spell->Id == SPELL_LIGHTNING_CONDUIT_DUMMY_1) && !_overloaded)
+            {
+                _overloaded = true;
+                DoCastSelf(SPELL_LIGHTNING_ROD_2, true);
+                Talk(ANN_OVERLOAD);
+                _events.ScheduleEvent(EVENT_OVERLOAD_END, 2s);
+            }
+            else if (spell->Id == SPELL_OVERLOAD_1)
+            {
+                if (_instance)
+                    if (Creature* pHagara = ObjectAccessor::GetCreature(*me, _instance->GetGuidData(DATA_HAGARA_THE_STORMBINDER)))
+                        pHagara->AI()->DoAction(ACTION_CRYSTAL_DIED);
+            }
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            _events.Update(diff);
+            while (uint32 e = _events.ExecuteEvent())
+            {
+                if (e == EVENT_OVERLOAD_END)
+                {
+                    if (_instance)
+                        if (Creature* pHagara = ObjectAccessor::GetCreature(*me, _instance->GetGuidData(DATA_HAGARA_THE_STORMBINDER)))
+                            pHagara->AI()->DoAction(ACTION_CRYSTAL_DIED);
+                    me->DespawnOrUnsummon();
+                }
+            }
+        }
+
+    private:
+        InstanceScript* _instance;
+        bool _overloaded;
+        EventMap _events;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return GetDragonSoulAI<npc_hagara_the_stormbinder_crystal_conductorAI>(creature);
+    }
+};
+
