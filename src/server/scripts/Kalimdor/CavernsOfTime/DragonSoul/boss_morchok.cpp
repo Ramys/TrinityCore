@@ -39,19 +39,19 @@ enum ScriptedTexts
 
 enum Spells
 {
-    SPELL_BERSERK                   = 47008,
-    SPELL_STOMP                     = 103414, // 1.5s cast, AoE 25y, double closest 2, +100% phys taken
-    SPELL_CRUSH_ARMOR               = 103687, // -10% armor 20s stack 10
-    SPELL_RESONATING_CRYSTAL        = 103640, // summon crystal
-    SPELL_RESONATING_CRYSTAL_SUMMON = 103639, // trigger missile
-    SPELL_RESONATING_CRYSTAL_DMG    = 103494, // explosion split 3/7
-    SPELL_FURIOUS                   = 103846, // +20% dmg & +20% atk speed at 20% HP
-    SPELL_EARTHEN_VORTEX            = 103821, // Pulls all players to boss & slows 50%
-    SPELL_FALLING_FRAGMENTS         = 103176, // Channeled 5s, creates stone pillars for LoS
-    SPELL_BLACK_BLOOD_OF_THE_EARTH  = 103785, // 5k Nature + 100% taken stack 6s (triggered)
-    SPELL_BLACK_BLOOD_CHANNEL       = 103851, // Channel 2s/15s, periodic trigger 103785 cada 1s - visual 21755
-    SPELL_SUMMON_KOHCROM            = 109017, // Summon Kohcrom
-    SPELL_MORCHOK_JUMP              = 109070  // Visual jump at 90%
+    SPELL_BERSERK                   = 47008,  // DBC cast0 dur 1800000 vis 7481, berserk 30min existe mas morchok usa 7min event
+    SPELL_STOMP                     = 103414, // DBC 4291 -> 103414/108571/109033/109034, 750k/2300k/750k/2000k, 1.5s cast idx16, vis 21711
+    SPELL_CRUSH_ARMOR               = 103687, // -10% armor 20s stack 10, DBC aura 101 base -10, dur 20s idx18, vis 843, sem dificuldade hero remove
+    SPELL_RESONATING_CRYSTAL        = 103640, // DBC vis 21744, eff32 trig 103639 -> summon 55346
+    SPELL_RESONATING_CRYSTAL_SUMMON = 103639, // eff28 misc 55346/3133
+    SPELL_RESONATING_CRYSTAL_DMG    = 103494, // vis 21715, eff23 trig 103528, split 3/7 via 103528 TA 18/B16
+    SPELL_FURIOUS                   = 103846, // DBC dur -1 vis 5301, +20% dmg (79 base20) +30% atk speed (138 base30)
+    SPELL_EARTHEN_VORTEX            = 103821, // DBC 4446 -> 103821/110047/110046/110045, vis 0, trig 104512 jump
+    SPELL_FALLING_FRAGMENTS         = 103176, // Channeled 5s, DBC dur 5000 vis 21755, cria pilares LoS
+    SPELL_BLACK_BLOOD_OF_THE_EARTH  = 103785, // DBC 4290 -> 103785/108570/110288/110287, 5k Nature +100% taken stack 6s, vis 21778
+    SPELL_BLACK_BLOOD_CHANNEL       = 103851, // Channel 2s/15s vis 21755, periodic trigger 103785 cada 1s (DBC cast5 2000 dur 15000)
+    SPELL_SUMMON_KOHCROM            = 109017, // eff28 misc 57773
+    SPELL_MORCHOK_JUMP              = 109070  // visual jump at 90%, eff42 DBC jump - stomp vuln +100% em 109033/109034 idx2 aura87 base100 via DBC
 };
 
 enum Events
@@ -316,11 +316,11 @@ struct boss_morchok : public BossAI
     {
         if (action == ACTION_CRYSTAL_EXPLODED && events.IsInPhase(PHASE_NORMAL))
         {
-            uint32 requiredCrystals = _isHeroic ? 4 : 2;
+            // Retail 4.3: Normal 3 cristais por fase; Heroic Morchok 3 + Kohcrom 2 = 5 total. Tauri 4.1/8.3
+            // DBC: 103640->103639 summon 55346, explosao 103494 trigger 103528/103529, visual 21744/21715
+            uint32 requiredCrystals = _isHeroic ? 5 : 3;
             if (++_crystalCount >= requiredCrystals)
-            {
                 StartBlackBloodPhase();
-            }
         }
     }
 
@@ -374,6 +374,9 @@ struct boss_morchok : public BossAI
                 }
                 case EVENT_CRUSH_ARMOR:
                 {
+                    // Tauri 8.1: Crush Armor nao existe em heroico apos split 90% (divide Kohcrom). DBC 103687 sem diff, remove
+                    if (_isHeroic && _kohcromSummoned)
+                        break;
                     if (Unit* victim = me->GetVictim())
                         DoCast(victim, SPELL_CRUSH_ARMOR);
                     events.ScheduleEvent(EVENT_CRUSH_ARMOR, Milliseconds(10000 + rand() % 3000), 0, PHASE_NORMAL);
@@ -747,8 +750,8 @@ private:
     };
 };
 
-// Cristal Ressonante: dano dividido entre 3 (10m) ou 7 (25m) jogadores. 4.3.4: SpellScript direto.
-// DBC 103528 TA 18/B16 idx1 eff3 (area), 103494 TA1 self -> hook deve ser 103528 EFFECT_1
+// Cristal Ressonante: dano dividido entre 3 (10m/LFR) ou 7 (25m) jogadores. DBC 103494 idx1 trig 103528
+// 103528/104573 dificuldade 4066 (10N/25N), eff3 TA 18/B16 idx1 -> EFFECT_1 area. Validado Spell.dbc+SpellEffect.dbc
 class spell_morchok_resonating_crystal_dmg : public SpellScript
 {
     void FilterTargets(std::list<WorldObject*>& targets)

@@ -76,6 +76,7 @@ public:
                 case NPC_WARLORD_ZONOZZ:
                 case NPC_YORSAHJ_THE_UNSLEEPING:
                 case NPC_HAGARA_THE_STORMBINDER:
+                case NPC_NETHESTRASZ:
                 case NPC_VALEERA:
                 case NPC_EIENDORMI:
                 case NPC_YSERA_MADNESS_OF_DEATHWING:

@@ -27,8 +27,9 @@ namespace DragonSoul
 {
 Position const taxiPortalsPos[] =
 {
-    { -1743.6478f, -1835.1325f, -220.509f, 4.53f },
-    { -1854.2331f, -3068.6586f, -178.339f, 0.46f }
+    { -1743.6478f, -1835.1325f, -220.509f, 4.53f }, // PORTAL_VALEERA -> Zon'ozz
+    { -1854.2331f, -3068.6586f, -178.339f, 0.46f }, // PORTAL_EIENDORMI -> Yor'sahj
+    { 13639.1875f, 13601.0488f, 123.480f,  4.66f }   // PORTAL_NETHESTRASZ -> Hagara/Eye of Eternity - fix portal Hagara liberado apos Zon'ozz+Yor'sahj
 };
 Position const taxiTowerPos = { -1789.48291f, -2362.63818f, 47.289059f, 4.638559f };
 
@@ -36,9 +37,10 @@ uint32 GetPortalForEntry(uint32 entry)
 {
     switch (entry)
     {
-        case NPC_VALEERA:   return PORTAL_VALEERA;
-        case NPC_EIENDORMI: return PORTAL_EIENDORMI;
-        default:            break;
+        case NPC_VALEERA:     return PORTAL_VALEERA;
+        case NPC_EIENDORMI:   return PORTAL_EIENDORMI;
+        case NPC_NETHESTRASZ: return PORTAL_NETHESTRASZ;
+        default:              break;
     }
     return 0;
 }
@@ -76,6 +78,9 @@ public:
                     return _instance->CheckRequiredBosses(DATA_WARLORD_ZONOZZ, player);
                 case NPC_EIENDORMI:
                     return _instance->CheckRequiredBosses(DATA_YORSAHJ_THE_UNSLEEPING, player);
+                case NPC_NETHESTRASZ:
+                    // Blizzlike Dragon Soul: Hagara (Eye of Eternity) so libera apos Zon'ozz (2) + Yor'sahj (3) DONE
+                    return _instance->CheckRequiredBosses(DATA_HAGARA_THE_STORMBINDER, player);
                 default: break;
             }
             return false;

@@ -46,8 +46,8 @@ SET @sql := IF(@has_boxbtid=0, 'ALTER TABLE `gossip_menu_option` ADD `BoxBroadca
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 
--- 1) ScriptName + GOSSIP npcflag (0x1) nos drakes
-UPDATE `creature_template` SET `ScriptName` = 'npc_dragon_soul_teleport', `npcflag` = `npcflag` | 1 WHERE `entry` IN (57288, 57289);
+-- 1) ScriptName + GOSSIP npcflag (0x1) nos drakes (fix Hagara: inclui Nethestrasz 57287 p/ portal Eye of Eternity apos Zon'ozz+Yor'sahj DONE)
+UPDATE `creature_template` SET `ScriptName` = 'npc_dragon_soul_teleport', `npcflag` = `npcflag` | 1 WHERE `entry` IN (57287, 57288, 57289);
 
 -- 2) Texto do menu gossip (TextID 100000)
 DELETE FROM `npc_text` WHERE `ID` = 100000;
@@ -75,12 +75,15 @@ INSERT INTO `gossip_menu_option` (`MenuID`, `OptionID`, `OptionIcon`, `OptionTex
 
 -- 5) Spawn dos drakes na sala apos Morchok (map 967, zone 5892 Dragon Soul, area 5923 The Dragon Wastes) - Grade [28,27] Cell [5,3]/[5,4] Instance 1
 -- Coord .gps solicitado: Valeera 57289 (-1789.48291, -2362.63818, 47.289059, 4.638559 FloorZ 47.288376) / Eiendormi 57288 (-1783.362793, -2419.810059, 45.673759, 1.734852 FloorZ 45.672554)
+-- Fix Hagara: + Nethestrasz 57287 na torre (aparece apos Zon'ozz+Yor'sahj, gossip bloqueado via CheckRequiredBosses(DATA_HAGARA) em dragon_soul.cpp) + reverso na Eye p/ retorno
 -- GroundZ 31.981552/35.631393 VMap1 MMap1. Todas dificuldades 10N/25N/10H/25H = spawnMask 15, phaseMask 1, VerifiedBuild 0 (compativel TDB root 2022 e DB migrado via header AUTO-FIX 1054)
-DELETE FROM `creature` WHERE `guid` IN (1770001, 1770002, 1770003, 1770004);
-DELETE FROM `creature` WHERE `id` IN (57288, 57289) AND `map`=967 AND `guid` NOT IN (1770001, 1770002, 1770003, 1770004);
+DELETE FROM `creature` WHERE `guid` IN (1770001, 1770002, 1770003, 1770004, 1770005, 1770006);
+DELETE FROM `creature` WHERE `id` IN (57287, 57288, 57289) AND `map`=967 AND `guid` NOT IN (1770001, 1770002, 1770003, 1770004, 1770005, 1770006);
 INSERT INTO `creature` (`guid`, `id`, `map`, `zoneId`, `areaId`, `spawnMask`, `phaseUseFlags`, `phaseMask`, `PhaseId`, `PhaseGroup`, `terrainSwapMap`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `wander_distance`, `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `ScriptName`, `VerifiedBuild`) VALUES
 (1770001, 57289, 967, 5892, 5923, 15, 0, 1, 0, 0, -1, 0, 0, -1789.48291, -2362.63818, 47.289059, 4.638559, 7200, 0, 0, 1, 0, 0, 1, 0, '', 0),
 (1770002, 57288, 967, 5892, 5923, 15, 0, 1, 0, 0, -1, 0, 0, -1783.362793, -2419.810059, 45.673759, 1.734852, 7200, 0, 0, 1, 0, 0, 1, 0, '', 0),
+(1770005, 57287, 967, 5892, 5923, 15, 0, 1, 0, 0, -1, 0, 0, -1786.120000, -2361.000000, 46.500000, 4.638559, 7200, 0, 0, 1, 0, 0, 1, 0, '', 0),
 -- 5b) Drakes reversos nas arenas para retorno (IsAtTower Z>0 ? ida : volta) - liberados so apos Zon'ozz+DONE && Yor'sahj DONE
 (1770003, 57289, 967, 5892, 5923, 15, 0, 1, 0, 0, -1, 0, 0, -1748.120000, -1829.450000, -220.100000, 2.000000, 7200, 0, 0, 1, 0, 0, 1, 0, '', 0),
-(1770004, 57288, 967, 5892, 5923, 15, 0, 1, 0, 0, -1, 0, 0, -1860.450000, -3075.220000, -178.210000, 3.500000, 7200, 0, 0, 1, 0, 0, 1, 0, '', 0);
+(1770004, 57288, 967, 5892, 5923, 15, 0, 1, 0, 0, -1, 0, 0, -1860.450000, -3075.220000, -178.210000, 3.500000, 7200, 0, 0, 1, 0, 0, 1, 0, '', 0),
+(1770006, 57287, 967, 5892, 5923, 15, 0, 1, 0, 0, -1, 0, 0, 13622.000000, 13595.000000, 123.480000, 3.140000, 7200, 0, 0, 1, 0, 0, 1, 0, '', 0);

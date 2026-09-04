@@ -117,7 +117,8 @@ enum DSCreatures
 
     // Dragon Soul - Darkhounds (taxis voadores p/ arenas) - port do 5.4.8
     NPC_VALEERA                                 = 57289, // Taxi drake -> Zon'ozz (map 967)
-    NPC_EIENDORMI                               = 57288  // Taxi drake -> Yor'sahj (map 967)
+    NPC_EIENDORMI                               = 57288, // Taxi drake -> Yor'sahj (map 967)
+    NPC_NETHESTRASZ                             = 57287  // Taxi drake -> Hagara/Eye of Eternity (map 967) - fix portal Hagara liberado apos Zon'ozz+Yor'sahj
 };
 
 enum DSGameObjectIds
@@ -159,9 +160,10 @@ AI* GetDragonSoulAI(Creature* creature)
 
 enum DragonSoulPortals
 {
-    PORTAL_VALEERA    = 0, // Valeera (57289) -> Zon'ozz
-    PORTAL_EIENDORMI  = 1, // Eiendormi (57288) -> Yor'sahj
-    PORTAL_TOWER      = 2  // retorno Wyrmrest/torre central (drakes reversos)
+    PORTAL_VALEERA     = 0, // Valeera (57289) -> Zon'ozz
+    PORTAL_EIENDORMI   = 1, // Eiendormi (57288) -> Yor'sahj
+    PORTAL_NETHESTRASZ = 2, // Nethestrasz (57287) -> Hagara / Eye of Eternity - fix portal Hagara liberado apos Zon'ozz+Yor'sahj
+    PORTAL_TOWER       = 3  // retorno Wyrmrest/torre central (drakes reversos)
 };
 
 // Coords taxi drakes (map 967) - port do 5.4.8 (dragon_soul.cpp)
