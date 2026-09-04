@@ -68,11 +68,13 @@ INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES
 -- Se SELECT retornar 0 linhas, spawn faltando -> inserir
 -- SELECT `guid`, `id`, `map`, `position_x`, `position_y`, `position_z`, `orientation`, `spawnMask` FROM `creature` WHERE `id`=55308 AND `map`=967;
 
--- Spawn retail 4.3.4 sniff: sala após Morchok (corredor para Yor'sahj)
+-- Spawn retail 4.3.4 .gps: sala apos Morchok [28,28] Cell [5,3] Instance 1 - FloorZ -225.791809 VMap1 MMap1
 -- TDB_full_world_434.22011_2022_01_09.sql (raiz) usa `wander_distance`+`dynamicflags`+phase cols -> schema 2022
+DELETE FROM `creature` WHERE `guid`=900001;
+DELETE FROM `creature` WHERE `id`=55308 AND `map`=967 AND `guid`!=900001;
 INSERT INTO `creature` (`guid`,`id`,`map`,`zoneId`,`areaId`,`spawnMask`,`phaseUseFlags`,`phaseMask`,`PhaseId`,`PhaseGroup`,`terrainSwapMap`,`modelid`,`equipment_id`,`position_x`,`position_y`,`position_z`,`orientation`,`spawntimesecs`,`wander_distance`,`currentwaypoint`,`curhealth`,`curmana`,`MovementType`,`npcflag`,`unit_flags`,`ScriptName`,`VerifiedBuild`)
-SELECT 900001, 55308, 967, 0, 0, 15, 0, 1, 0, 0, -1, 0, 0, -13868.7, -12126.3, 271.0, 1.57, 120, 0, 0, 49237900, 0, 0, 0, 0, '', 0
-FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM `creature` WHERE `id`=55308 AND `map`=967);
+SELECT 900001, 55308, 967, 5892, 5923, 15, 0, 1, 0, 0, -1, 0, 0, -1767.538818, -1899.716187, -225.791519, 5.126988, 120, 0, 0, 49237900, 0, 0, 0, 0, '', 0
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM `creature` WHERE `guid`=900001);
 
 -- 4) Garante spawnMask 15 = todas dificuldades (10N/25N/10H/25H) em 967
 UPDATE `creature` SET `spawnMask`=15 WHERE `id`=55308 AND `map`=967;
