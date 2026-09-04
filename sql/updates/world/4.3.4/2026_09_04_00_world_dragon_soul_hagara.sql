@@ -9,6 +9,42 @@
 -- Apply AFTER base Cataclysm Preservation Project.
 -- ============================================================================
 
+-- AUTO-FIX 1054: garante schema final antes dos INSERTs (idempotente, compat TDB root 2022 e DB migrado)
+SET @has_spawndist := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='creature' AND COLUMN_NAME='spawndist');
+SET @has_wander := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='creature' AND COLUMN_NAME='wander_distance');
+SET @sql := IF(@has_spawndist=1 AND @has_wander=0, 'ALTER TABLE `creature` CHANGE COLUMN `spawndist` `wander_distance` FLOAT NOT NULL DEFAULT 0', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @has_dyn := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='creature' AND COLUMN_NAME='dynamicflags');
+SET @sql := IF(@has_dyn=1, 'ALTER TABLE `creature` DROP COLUMN `dynamicflags`', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @has_optidx := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='gossip_menu_option' AND COLUMN_NAME='OptionIndex');
+SET @sql := IF(@has_optidx=1, 'ALTER TABLE `gossip_menu_option` CHANGE `MenuId` `MenuID` int(10) unsigned NOT NULL DEFAULT 0', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql := IF(@has_optidx=1, 'ALTER TABLE `gossip_menu_option` CHANGE `OptionIndex` `OptionID` int(10) unsigned NOT NULL DEFAULT 0', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @has_bcid_old := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='gossip_menu_option' AND COLUMN_NAME='OptionBroadcastTextId');
+SET @sql := IF(@has_bcid_old=1, 'ALTER TABLE `gossip_menu_option` CHANGE `OptionBroadcastTextId` `OptionBroadcastTextID` int(10) unsigned NOT NULL DEFAULT 0', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @has_action := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='gossip_menu_option' AND COLUMN_NAME='ActionMenuID');
+SET @sql := IF(@has_action=0, 'ALTER TABLE `gossip_menu_option` ADD `ActionMenuID` int(10) unsigned NOT NULL DEFAULT 0 AFTER `OptionNpcFlag`', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @has_apoi := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='gossip_menu_option' AND COLUMN_NAME='ActionPoiID');
+SET @sql := IF(@has_apoi=0, 'ALTER TABLE `gossip_menu_option` ADD `ActionPoiID` int(10) unsigned NOT NULL DEFAULT 0 AFTER `ActionMenuID`', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @has_boxcoded := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='gossip_menu_option' AND COLUMN_NAME='BoxCoded');
+SET @sql := IF(@has_boxcoded=0, 'ALTER TABLE `gossip_menu_option` ADD `BoxCoded` tinyint(3) unsigned NOT NULL DEFAULT 0 AFTER `ActionPoiID`', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @has_boxmoney := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='gossip_menu_option' AND COLUMN_NAME='BoxMoney');
+SET @sql := IF(@has_boxmoney=0, 'ALTER TABLE `gossip_menu_option` ADD `BoxMoney` int(10) unsigned NOT NULL DEFAULT 0 AFTER `BoxCoded`', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @has_boxtext := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='gossip_menu_option' AND COLUMN_NAME='BoxText');
+SET @sql := IF(@has_boxtext=0, 'ALTER TABLE `gossip_menu_option` ADD `BoxText` mediumtext AFTER `BoxMoney`', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @has_boxbtid := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='gossip_menu_option' AND COLUMN_NAME='BoxBroadcastTextID');
+SET @sql := IF(@has_boxbtid=0, 'ALTER TABLE `gossip_menu_option` ADD `BoxBroadcastTextID` int(10) unsigned NOT NULL DEFAULT 0 AFTER `BoxText`', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+
 -- 1) ScriptName boss + difficulties (lootid herdado, ScriptName replica para entry dificuldade)
 UPDATE `creature_template` SET `ScriptName`='boss_hagara_the_stormbinder' WHERE `entry`=55689;
 UPDATE `creature_template` SET `ScriptName`='boss_hagara_the_stormbinder' WHERE `entry` IN (57462,57955,57956) AND (`ScriptName` IS NULL OR `ScriptName`='');
@@ -39,8 +75,8 @@ INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
 
 -- 3) Spawn map 967 (Eye of Eternity / Dragon Soul) - sempre presente, gate via C++ Evade
 -- Dev schema creature (world_database.sql): guid,id,map,zoneId,areaId,spawnMask,phaseUseFlags,phaseMask,PhaseId,PhaseGroup,terrainSwapMap,modelid,equipment_id,...
-INSERT INTO `creature` (`guid`,`id`,`map`,`zoneId`,`areaId`,`spawnMask`,`phaseUseFlags`,`phaseMask`,`PhaseId`,`PhaseGroup`,`terrainSwapMap`,`modelid`,`equipment_id`,`position_x`,`position_y`,`position_z`,`orientation`,`spawntimesecs`,`spawndist`,`currentwaypoint`,`curhealth`,`curmana`,`MovementType`,`npcflag`,`unit_flags`,`dynamicflags`,`ScriptName`,`VerifiedBuild`)
-SELECT 900003,55689,967,0,0,15,0,1,0,0,-1,0,0,13587.4,13612.0,122.43,5.93,120,0,0,42000000,0,0,0,0,0,'',15595 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM `creature` WHERE `id`=55689 AND `map`=967);
+INSERT INTO `creature` (`guid`,`id`,`map`,`zoneId`,`areaId`,`spawnMask`,`phaseUseFlags`,`phaseMask`,`PhaseId`,`PhaseGroup`,`terrainSwapMap`,`modelid`,`equipment_id`,`position_x`,`position_y`,`position_z`,`orientation`,`spawntimesecs`,`wander_distance`,`currentwaypoint`,`curhealth`,`curmana`,`MovementType`,`npcflag`,`unit_flags`,`ScriptName`,`VerifiedBuild`)
+SELECT 900003,55689,967,0,0,15,0,1,0,0,-1,0,0,13587.4,13612.0,122.43,5.93,120,0,0,42000000,0,0,0, 0, '',15595 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM `creature` WHERE `id`=55689 AND `map`=967);
 UPDATE `creature` SET `spawnMask`=15 WHERE `id`=55689 AND `map`=967;
 UPDATE `creature` SET `spawnMask`=15 WHERE `id` IN (56136,56104,56108,55695,57867,56165,56700) AND `map`=967;
 
