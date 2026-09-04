@@ -429,8 +429,12 @@ public:
     {
         if (action == ACTION_ICE_WAVE_MOVE)
             events.ScheduleEvent(EVENT_ICE_WAVE_MOVE, 50ms);
-        else if (action == ACTION_CRYSTAL_DIED)
-            _dummyfrif = true;
+        else if (action == ACTION_CRYSTAL_DIED && _crystalCount > 0)
+        {
+            _crystalCount--;
+            if (_crystalCount == 0)
+                events.ScheduleEvent(EVENT_END_SPECIAL_PHASE, 2500ms);
+        }
     }
 
 
@@ -665,4 +669,91 @@ public:
 
         DoMeleeAttackIfReady();
     }
+
+
+private:
+    uint32 circlePosition;
+    uint32 _phase;
+    bool _specialPhase;
+    uint8 _crystalCount;
+    bool _mainWave;
+    bool _dummyfrif;
+    bool _icyTombLock;
+    uint8 _tombCount;
+    uint32 _frozenTempestTimer;
+
+    void SpecialPhaseEnd()
+    {
+        _specialPhase = false;
+        events.CancelEvent(EVENT_ICICLE);
+        events.CancelEvent(EVENT_WATERY_ENTRENCHMENT);
+        events.CancelEvent(EVENT_STORM_PILLARS);
+        events.CancelEvent(EVENT_FROSTFLAKE);
+        events.CancelEvent(EVENT_END_SPECIAL_PHASE);
+
+        me->RemoveAurasDueToSpell(SPELL_CRYSTALLINE_TETHER_1);
+        me->RemoveAurasDueToSpell(SPELL_CRYSTALLINE_TETHER_2);
+        me->RemoveAurasDueToSpell(SPELL_WATER_SHIELD);
+        me->RemoveAurasDueToSpell(SPELL_FROZEN_TEMPEST);
+        if (instance)
+        {
+            instance->DoRemoveAurasDueToSpellOnPlayers(SPELL_WATERY_ENTRENCHMENT);
+            instance->DoRemoveAurasDueToSpellOnPlayers(SPELL_LIGHTNING_CONDUIT_DUMMY_1);
+            instance->DoRemoveAurasDueToSpellOnPlayers(SPELL_LIGHTNING_CONDUIT_DUMMY_2);
+        }
+
+        DespawnCreatures(NPC_ICE_WAVE);
+        summons.DespawnEntry(NPC_CRYSTAL_CONDUCTOR);
+        summons.DespawnEntry(NPC_BOUND_LIGHTNING_ELEM);
+        summons.DespawnEntry(NPC_BINDING_CRYSTAL);
+
+        me->SetReactState(REACT_AGGRESSIVE);
+        AttackStart(me->GetVictim());
+
+        DoCastSelf(SPELL_FEEDBACK, true);
+
+        events.ScheduleEvent(EVENT_ICE_LANCE, 12s);
+        events.ScheduleEvent(EVENT_ICY_TOMB, 20s);
+        events.ScheduleEvent(EVENT_FOCUSED_ASSAULT, 15s);
+        events.ScheduleEvent(EVENT_SHATTERED_ICE, urand(20000, 30500));
+
+        if (_phase == PHASE_LIGHTNING)
+        {
+            events.ScheduleEvent(EVENT_FROZEN_TEMPEST_1, 62s);
+            me->RemoveAurasDueToSpell(SPELL_HAGARA_LIGHTNING_AXES);
+            DoCastSelf(SPELL_HAGARA_FROST_AXES, true);
+        }
+        else if (_phase == PHASE_ICE)
+        {
+            events.ScheduleEvent(EVENT_ELECTRICAL_STORM_1, 62s);
+            me->RemoveAurasDueToSpell(SPELL_HAGARA_FROST_AXES);
+            DoCastSelf(SPELL_HAGARA_LIGHTNING_AXES, true);
+        }
+        _phase = PHASE_INTRO;
+        Talk(SAY_FEEDBACK);
+    }
+
+    void IceWaveMove()
+    {
+        if (circlePosition >= 17)
+            circlePosition = 0;
+        if (Creature* pWave = me->SummonCreature(NPC_ICE_WAVE, circlePos[circlePosition][0], TEMPSUMMON_TIMED_DESPAWN, 20s))
+        {
+            pWave->AI()->SetData(DATA_CIRCLE_POINT, circlePosition);
+            pWave->AI()->SetData(DATA_MAIN_WAVE, _mainWave ? 1 : 0);
+            pWave->GetMotionMaster()->MovePoint(POINT_ICE_WAVE, circlePos[circlePosition][1]);
+        }
+        circlePosition++;
+    }
+
+    void DespawnCreatures(uint32 entry)
+    {
+        std::list<Creature*> creatures;
+        GetCreatureListWithEntryInGrid(creatures, me, entry, 1000.0f);
+        if (creatures.empty())
+            return;
+        for (std::list<Creature*>::iterator iter = creatures.begin(); iter != creatures.end(); ++iter)
+            (*iter)->DespawnOrUnsummon();
+    }
+};
 
