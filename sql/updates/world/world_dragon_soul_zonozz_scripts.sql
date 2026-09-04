@@ -8,8 +8,8 @@
 -- 1) ScriptName: core precisa disto para instanciar AI correta
 -- Zon'ozz já existe na core mas sem registro -> invisivel/mudo/sem AI
 UPDATE `creature_template` SET `ScriptName` = 'boss_warlord_zonozz' WHERE `entry` = 55308;
-UPDATE `creature_template` SET `ScriptName` = 'npc_warlord_zonozz_void_of_the_unmaking' WHERE `entry` = 55334;
-UPDATE `creature_template` SET `ScriptName` = 'npc_warlord_zonozz_tentacle' WHERE `entry` IN (55416, 55417, 55418);
+UPDATE `creature_template` SET `ScriptName` = 'npc_warlord_zonozz_void_of_the_unmaking' WHERE `entry` IN (55334, 58473);
+UPDATE `creature_template` SET `ScriptName` = 'npc_warlord_zonozz_tentacle' WHERE `entry` IN (55416, 55417, 55418, 57875, 57877);
 
 -- 2) Spell scripts: liga SpellScriptLoader aos spells
 DELETE FROM `spell_script_names` WHERE `spell_id` IN (103434, 103948);
@@ -33,10 +33,9 @@ INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES
 -- SELECT `guid`, `id`, `map`, `position_x`, `position_y`, `position_z`, `orientation`, `spawnMask` FROM `creature` WHERE `id`=55308 AND `map`=967;
 
 -- Spawn retail 4.3.4 sniff: sala após Morchok (corredor para Yor'sahj)
--- Insere só se não existir (evita duplicar guid) - coluna correta `id` (não `id1`), erro 1054 fix
--- Compatível com DB atualizado (2025_03_11_03 DROP dynamicflags) e antigo: evita 1054 dynamicflags; wander_distance já fix spawndist
-INSERT INTO `creature` (`guid`, `id`, `map`, `zoneId`, `areaId`, `spawnMask`, `phaseMask`, `modelid`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `wander_distance`, `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`)
-SELECT 900001, 55308, 967, 0, 0, 15, 1, 0, -13868.7, -12126.3, 271.0, 1.57, 120, 0, 0, 49237900, 0, 0, 0, 0
+-- TDB_full_world_434.22011_2022_01_09.sql (raiz) usa `spawndist`+`dynamicflags`+phase cols -> schema 2022
+INSERT INTO `creature` (`guid`,`id`,`map`,`zoneId`,`areaId`,`spawnMask`,`phaseUseFlags`,`phaseMask`,`PhaseId`,`PhaseGroup`,`terrainSwapMap`,`modelid`,`equipment_id`,`position_x`,`position_y`,`position_z`,`orientation`,`spawntimesecs`,`spawndist`,`currentwaypoint`,`curhealth`,`curmana`,`MovementType`,`npcflag`,`unit_flags`,`dynamicflags`,`ScriptName`,`VerifiedBuild`)
+SELECT 900001, 55308, 967, 0, 0, 15, 0, 1, 0, 0, -1, 0, 0, -13868.7, -12126.3, 271.0, 1.57, 120, 0, 0, 49237900, 0, 0, 0, 0, 0, '', 0
 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM `creature` WHERE `id`=55308 AND `map`=967);
 
 -- 4) Garante spawnMask 15 = todas dificuldades (10N/25N/10H/25H) em 967
