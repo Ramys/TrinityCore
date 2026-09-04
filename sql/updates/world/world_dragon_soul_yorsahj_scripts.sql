@@ -32,8 +32,9 @@ INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES
 -- Se SELECT retornar 0 linhas, spawn faltando -> inserir
 -- SELECT `guid`, `id`, `map`, `position_x`, `position_y`, `position_z`, `orientation`, `spawnMask` FROM `creature` WHERE `id`=55312 AND `map`=967;
 -- Spawn retail sniff aproximado: sala após Zon'ozz (caminho para Hagara), Z valido via UpdateGroundPositionZ
-INSERT INTO `creature` (`guid`, `id`, `map`, `zoneId`, `areaId`, `spawnMask`, `phaseMask`, `modelid`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `wander_distance`, `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`)
-SELECT 900002, 55312, 967, 0, 0, 15, 1, 0, -13530.5, -12105.8, 268.2, 1.57, 120, 0, 0, 49237900, 0, 0, 0, 0
+-- TDB_full_world_434.22011_2022_01_09.sql (raiz) usa `spawndist`+`dynamicflags`+phase cols -> schema 2022
+INSERT INTO `creature` (`guid`,`id`,`map`,`zoneId`,`areaId`,`spawnMask`,`phaseUseFlags`,`phaseMask`,`PhaseId`,`PhaseGroup`,`terrainSwapMap`,`modelid`,`equipment_id`,`position_x`,`position_y`,`position_z`,`orientation`,`spawntimesecs`,`spawndist`,`currentwaypoint`,`curhealth`,`curmana`,`MovementType`,`npcflag`,`unit_flags`,`dynamicflags`,`ScriptName`,`VerifiedBuild`)
+SELECT 900002, 55312, 967, 0, 0, 15, 0, 1, 0, 0, -1, 0, 0, -13530.5, -12105.8, 268.2, 1.57, 120, 0, 0, 49237900, 0, 0, 0, 0, 0, '', 0
 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM `creature` WHERE `id`=55312 AND `map`=967);
 
 -- 4) Garante spawnMask 15 = todas dificuldades (10N/25N/10H/25H) em 967
