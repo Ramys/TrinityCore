@@ -986,3 +986,167 @@ public:
     }
 };
 
+
+class npc_hagara_the_stormbinder_icy_tomb : public CreatureScript
+{
+public:
+    npc_hagara_the_stormbinder_icy_tomb() : CreatureScript("npc_hagara_the_stormbinder_icy_tomb") { }
+
+    struct npc_hagara_the_stormbinder_icy_tombAI : public ScriptedAI
+    {
+        npc_hagara_the_stormbinder_icy_tombAI(Creature* creature) : ScriptedAI(creature)
+        {
+            me->ApplySpellImmune(0, IMMUNITY_EFFECT, SPELL_EFFECT_KNOCK_BACK, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_GRIP, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_STUN, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_FEAR, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_ROOT, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_FREEZE, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_POLYMORPH, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_HORROR, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_SAPPED, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_CHARM, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_DISORIENTED, true);
+            me->ApplySpellImmune(0, IMMUNITY_STATE, SPELL_AURA_MOD_CONFUSE, true);
+            trappedPlayer = ObjectGuid::Empty;
+            existenceCheckTimer = 1000;
+            SetCombatMovement(false);
+        }
+
+        void Reset() override
+        {
+            me->SetReactState(REACT_PASSIVE);
+        }
+
+        void SetGUID(ObjectGuid guid, int32 type) override
+        {
+            if (type == DATA_TRAPPED_PLAYER)
+            {
+                trappedPlayer = guid;
+                existenceCheckTimer = 1000;
+            }
+        }
+
+        void JustDied(Unit* /*killer*/) override
+        {
+            if (Player* player = ObjectAccessor::GetPlayer(*me, trappedPlayer))
+            {
+                trappedPlayer = ObjectGuid::Empty;
+                player->RemoveAurasDueToSpell(SPELL_ICY_TOMB);
+            }
+            me->DespawnOrUnsummon(800);
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (!trappedPlayer)
+                return;
+
+            if (existenceCheckTimer <= diff)
+            {
+                Player* player = ObjectAccessor::GetPlayer(*me, trappedPlayer);
+                if (!player || player->isDead() || !player->HasAura(SPELL_ICY_TOMB))
+                {
+                    JustDied(me);
+                    me->DespawnOrUnsummon();
+                    return;
+                }
+                existenceCheckTimer = 1000;
+            }
+            else
+                existenceCheckTimer -= diff;
+        }
+
+    private:
+        ObjectGuid trappedPlayer;
+        uint32 existenceCheckTimer;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return GetDragonSoulAI<npc_hagara_the_stormbinder_icy_tombAI>(creature);
+    }
+};
+
+class npc_hagara_the_stormbinder_ice_lance : public CreatureScript
+{
+public:
+    npc_hagara_the_stormbinder_ice_lance() : CreatureScript("npc_hagara_the_stormbinder_ice_lance") { }
+
+    struct npc_hagara_the_stormbinder_ice_lanceAI : public ScriptedAI
+    {
+        npc_hagara_the_stormbinder_ice_lanceAI(Creature* creature) : ScriptedAI(creature)
+        {
+            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+            targetPlayer = ObjectGuid::Empty;
+            SetCombatMovement(false);
+        }
+
+        void Reset() override
+        {
+            me->SetReactState(REACT_PASSIVE);
+        }
+
+        void SetGUID(ObjectGuid guid, int32 type) override
+        {
+            if (type == DATA_ICE_LANCE_GUID)
+            {
+                targetPlayer = guid;
+                if (Player* player = ObjectAccessor::FindPlayer(guid))
+                    DoCast(player, SPELL_TARGET);
+                else
+                    me->DespawnOrUnsummon();
+            }
+        }
+
+        ObjectGuid GetGUID(int32 type) const override
+        {
+            if (type == DATA_ICE_LANCE_GUID)
+                return targetPlayer;
+            return ObjectGuid::Empty;
+        }
+
+    private:
+        ObjectGuid targetPlayer;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return GetDragonSoulAI<npc_hagara_the_stormbinder_ice_lanceAI>(creature);
+    }
+};
+
+class npc_hagara_the_stormbinder_collapsing_icicle : public CreatureScript
+{
+public:
+    npc_hagara_the_stormbinder_collapsing_icicle() : CreatureScript("npc_hagara_the_stormbinder_collapsing_icicle") { }
+
+    struct npc_hagara_the_stormbinder_collapsing_icicleAI : public ScriptedAI
+    {
+        npc_hagara_the_stormbinder_collapsing_icicleAI(Creature* creature) : ScriptedAI(creature)
+        {
+            SetCombatMovement(false);
+        }
+
+        void IsSummonedBy(Unit* /*summoner*/) override
+        {
+            _events.ScheduleEvent(EVENT_ICICLE, 6s);
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            _events.Update(diff);
+            if (_events.ExecuteEvent())
+                DoCastSelf(SPELL_ICICLE_AURA);
+        }
+
+    private:
+        EventMap _events;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return GetDragonSoulAI<npc_hagara_the_stormbinder_collapsing_icicleAI>(creature);
+    }
+};
+
