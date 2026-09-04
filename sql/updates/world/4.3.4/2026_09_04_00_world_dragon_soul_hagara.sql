@@ -112,9 +112,9 @@ INSERT INTO `creature_text` (`CreatureID`,`GroupID`,`ID`,`Text`,`Type`,`Language
 (55689,7,4,'More... lightning...',14,0,14,0,0,26233,0,0,0,'Hagara SAY_OVERLOAD CIRCUIT_05'),
 (55689,7,5,'Enough of your games!',14,0,14,0,0,26232,0,0,0,'Hagara SAY_OVERLOAD CIRCUIT_06'),
 (55689,7,6,'You won''t live to do it again.',14,0,15,0,0,26234,0,0,0,'Hagara SAY_OVERLOAD CIRCUIT_07'),
-(55689,8,0,'Aughhhh! Impossible!',14,0,100,0,0,0,0,0,'Hagara SAY_FEEDBACK phase end'),
+(55689,8,0,'Aughhhh! Impossible!',14,0,100,0,0,0,0,0,0,'Hagara SAY_FEEDBACK phase end'),
 (55689,9,0,'You should have run, dog!',14,0,25,0,0,26255,0,0,0,'Hagara SAY_KILL SLAY_01'),
 (55689,9,1,'Feh! Down, pup.',14,0,25,0,0,26254,0,0,0,'Hagara SAY_KILL SLAY_02'),
 (55689,9,2,'A waste of my time.',14,0,25,0,0,26256,0,0,0,'Hagara SAY_KILL SLAY_03'),
 (55689,9,3,'Pathetic.',14,0,25,0,0,26257,0,0,0,'Hagara SAY_KILL SLAY_04'),
-(55689,10,0,'%s begins to overload!',16,0,100,0,0,0,0,0,'Hagara ANN_OVERLOAD emote');
+(55689,10,0,'%s begins to overload!',16,0,100,0,0,0,0,0,0,'Hagara ANN_OVERLOAD emote');
