@@ -64,7 +64,11 @@ DELETE FROM `gossip_menu_option` WHERE `MenuID` = 13411;
 INSERT INTO `gossip_menu_option` (`MenuID`, `OptionID`, `OptionIcon`, `OptionText`, `OptionBroadcastTextID`, `OptionType`, `OptionNpcFlag`, `VerifiedBuild`) VALUES
 (13411, 0, 1, 'Fly me to the arena.', 0, 1, 1, 0);
 
--- 5) Spawn dos drakes no Summit (map 967), todas dificuldades do raid (10N/25N/10H/25H = spawnMask 15)
+-- 5) Spawn dos drakes na sala apos Morchok (map 967, zone 5892 Dragon Soul, area 5923 The Dragon Wastes) - Grade [28,27] Cell [5,3]/[5,4] Instance 1
+-- Coord .gps solicitado: Valeera 57289 (-1789.48291, -2362.63818, 47.289059, 4.638559 FloorZ 47.288376) / Eiendormi 57288 (-1783.362793, -2419.810059, 45.673759, 1.734852 FloorZ 45.672554)
+-- GroundZ 31.981552/35.631393 VMap1 MMap1. Todas dificuldades 10N/25N/10H/25H = spawnMask 15, phaseMask 1, VerifiedBuild 0 (compativel TDB root 2022 e DB migrado via header AUTO-FIX 1054)
+DELETE FROM `creature` WHERE `guid` IN (1770001, 1770002);
+DELETE FROM `creature` WHERE `id` IN (57288, 57289) AND `map`=967 AND `guid` NOT IN (1770001, 1770002);
 INSERT INTO `creature` (`guid`, `id`, `map`, `zoneId`, `areaId`, `spawnMask`, `phaseUseFlags`, `phaseMask`, `PhaseId`, `PhaseGroup`, `terrainSwapMap`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `wander_distance`, `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `ScriptName`, `VerifiedBuild`) VALUES
-(1770001, 57289, 967, 0, 0, 15, 0, 1, 0, 0, -1, 0, 0, -1781.19, -2375.12, 341.35, 0.00, 7200, 0, 0, 1, 0, 0, 1, 0, '', 0),
-(1770002, 57288, 967, 0, 0, 15, 0, 1, 0, 0, -1, 0, 0, -1777.19, -2375.12, 341.35, 0.00, 7200, 0, 0, 1, 0, 0, 1, 0, '', 0);
+(1770001, 57289, 967, 5892, 5923, 15, 0, 1, 0, 0, -1, 0, 0, -1789.48291, -2362.63818, 47.289059, 4.638559, 7200, 0, 0, 1, 0, 0, 1, 0, '', 0),
+(1770002, 57288, 967, 5892, 5923, 15, 0, 1, 0, 0, -1, 0, 0, -1783.362793, -2419.810059, 45.673759, 1.734852, 7200, 0, 0, 1, 0, 0, 1, 0, '', 0);
