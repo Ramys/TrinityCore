@@ -999,6 +999,77 @@ public:
 };
 
 
+class npc_hagara_the_stormbinder_bound_lightning_elemental : public CreatureScript
+{
+public:
+    npc_hagara_the_stormbinder_bound_lightning_elemental() : CreatureScript("npc_hagara_the_stormbinder_bound_lightning_elemental") { }
+
+    struct npc_hagara_the_stormbinder_bound_lightning_elementalAI : public ScriptedAI
+    {
+        npc_hagara_the_stormbinder_bound_lightning_elementalAI(Creature* creature) : ScriptedAI(creature)
+        {
+            me->ApplySpellImmune(0, IMMUNITY_EFFECT, SPELL_EFFECT_KNOCK_BACK, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_GRIP, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_STUN, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_FEAR, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_ROOT, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_FREEZE, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_POLYMORPH, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_HORROR, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_SAPPED, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_CHARM, true);
+            me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_DISORIENTED, true);
+            me->SetReactState(REACT_PASSIVE);
+        }
+
+        void IsSummonedBy(Unit* /*summoner*/) override
+        {
+            _events.ScheduleEvent(EVENT_ENABLE_ATTACK, 2s);
+        }
+
+        void JustDied(Unit* /*killer*/) override
+        {
+            if (Creature* conductor = me->FindNearestCreature(NPC_CRYSTAL_CONDUCTOR, 100.0f))
+                DoCast(conductor, SPELL_OVERLOAD_2, true);
+            me->DespawnOrUnsummon(3000ms);
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            _events.Update(diff);
+
+            while (uint32 eventId = _events.ExecuteEvent())
+            {
+                if (eventId == EVENT_ENABLE_ATTACK)
+                {
+                    me->SetReactState(REACT_AGGRESSIVE);
+                    if (Player* player = me->FindNearestPlayer(60.0f))
+                        AttackStart(player);
+                }
+            }
+
+            if (!UpdateVictim())
+                return;
+
+            DoMeleeAttackIfReady();
+        }
+
+    private:
+        enum ElementalEvents
+        {
+            EVENT_ENABLE_ATTACK = 1
+        };
+
+        EventMap _events;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return GetDragonSoulAI<npc_hagara_the_stormbinder_bound_lightning_elementalAI>(creature);
+    }
+};
+
+
 class npc_hagara_the_stormbinder_icy_tomb : public CreatureScript
 {
 public:
@@ -1297,6 +1368,7 @@ void AddSC_boss_hagara()
     RegisterCreatureAI(npc_hagara_the_stormbinder_ice_wave);
     RegisterCreatureAI(npc_hagara_the_stormbinder_frozen_binding_crystal);
     RegisterCreatureAI(npc_hagara_the_stormbinder_crystal_conductor);
+    RegisterCreatureAI(npc_hagara_the_stormbinder_bound_lightning_elemental);
     RegisterCreatureAI(npc_hagara_the_stormbinder_icy_tomb);
     RegisterCreatureAI(npc_hagara_the_stormbinder_ice_lance);
     RegisterCreatureAI(npc_hagara_the_stormbinder_collapsing_icicle);
