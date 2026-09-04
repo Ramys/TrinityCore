@@ -346,7 +346,7 @@ public:
             return;
         }
         BossAI::JustEngagedWith(who);
-        me->SetInCombatWithZone();
+        DoZoneInCombat();
         if (instance)
         {
             instance->SetBossState(DATA_HAGARA_THE_STORMBINDER, IN_PROGRESS);
@@ -354,7 +354,7 @@ public:
         }
         Talk(SAY_AGGRO);
         DoCastSelf(SPELL_BERSERK, true);
-        events.ScheduleEvent(EVENT_BERSERK, 8 * MINUTE * IN_MILLISECONDS);
+        events.ScheduleEvent(EVENT_BERSERK, 8min);
         if (urand(0, 1))
         {
             events.ScheduleEvent(EVENT_FROZEN_TEMPEST_1, 32s);
@@ -495,13 +495,13 @@ public:
                     break;
                 case EVENT_ICE_LANCE:
                 {
-                    UnitList targets;
-                    SelectTargetList(targets, 3, SELECT_TARGET_NEAREST, 0.0f, true);
+                    std::list<Unit*> targets;
+                    SelectTargetList(targets, 3, SELECT_TARGET_MINDISTANCE, 0, 0.0f, true);
                     if (targets.empty())
                         break;
                     Talk(SAY_ICELANCE);
                     uint8 i = 0;
-                    for (UnitList::const_iterator itr = targets.begin(); itr != targets.end(); ++itr)
+                    for (auto itr = targets.begin(); itr != targets.end(); ++itr)
                     {
                         if (Creature* pLance = me->SummonCreature(NPC_ICE_LANCE, icelancePos[i], TEMPSUMMON_TIMED_DESPAWN, 15000ms))
                             pLance->AI()->SetGUID((*itr)->GetGUID(), DATA_ICE_LANCE_GUID);
@@ -600,16 +600,16 @@ public:
                 }
                 case EVENT_ICICLE:
                 {
-                    UnitList targets;
-                    SelectTargetList(targets, RAID_MODE(3, 7), SELECT_TARGET_RANDOM, 0.0f, true);
+                    std::list<Unit*> targets;
+                    SelectTargetList(targets, RAID_MODE(3, 7), SELECT_TARGET_RANDOM, 0, 0.0f, true);
                     if (!targets.empty())
-                        for (UnitList::const_iterator itr = targets.begin(); itr != targets.end(); ++itr)
+                        for (auto itr = targets.begin(); itr != targets.end(); ++itr)
                             DoCast((*itr), SPELL_ICICLE, true);
                     events.ScheduleEvent(EVENT_ICICLE, urand(8000, 9000));
                     break;
                 }
                 case EVENT_FROSTFLAKE:
-                    DoCastAOE(SPELL_FROSTFLAKE, true);
+                    DoCast(me, SPELL_FROSTFLAKE, true);
                     events.ScheduleEvent(EVENT_FROSTFLAKE, urand(9000, 12000));
                     break;
 
@@ -671,7 +671,7 @@ public:
                     break;
                 }
                 case EVENT_STORM_PILLARS:
-                    DoCastAOE(SPELL_STORM_PILLARS, true);
+                    DoCast(me, SPELL_STORM_PILLARS, true);
                     events.ScheduleEvent(EVENT_STORM_PILLARS, urand(5000, 10000));
                     break;
                 case EVENT_END_SPECIAL_PHASE:
@@ -810,7 +810,7 @@ public:
                         {
                             if (Creature* pWave = me->SummonCreature(NPC_ICE_WAVE, circlePos[circlePoint][i]))
                             {
-                                pWave->SetSpeed(MOVE_RUN, 0.8f - 0.1f * i, true);
+                                pWave->SetSpeed(MOVE_RUN, 0.8f - 0.1f * i);
                                 pWave->AI()->SetData(DATA_CIRCLE_POINT, circlePoint);
                                 pWave->AI()->SetData(DATA_MAIN_WAVE, ((i == 0) ? 1 : 0));
                                 pWave->GetMotionMaster()->MovePoint(POINT_ICE_WAVE_MOVE, circlePos[(circlePoint < 17 ? circlePoint + 1 : 0)][i]);
@@ -947,7 +947,7 @@ public:
             SetCombatMovement(false);
         }
 
-        void SpellHit(Unit* caster, const SpellInfo* spell) override
+        void SpellHit(WorldObject* caster, SpellInfo const* spell) override
         {
             if ((spell->Id == SPELL_OVERLOAD_2 || spell->Id == SPELL_LIGHTNING_CONDUIT_DUMMY_1) && !_overloaded)
             {
@@ -1043,7 +1043,7 @@ public:
                 if (eventId == EVENT_ENABLE_ATTACK)
                 {
                     me->SetReactState(REACT_AGGRESSIVE);
-                    if (Player* player = me->FindNearestPlayer(60.0f))
+                    if (Player* player = me->SelectNearestPlayer(60.0f))
                         AttackStart(player);
                 }
             }
@@ -1101,7 +1101,7 @@ public:
             me->SetReactState(REACT_PASSIVE);
         }
 
-        void SetGUID(ObjectGuid guid, int32 type) override
+        void SetGUID(ObjectGuid const& guid, int32 type = 0) override
         {
             if (type == DATA_TRAPPED_PLAYER)
             {
@@ -1170,7 +1170,7 @@ public:
             me->SetReactState(REACT_PASSIVE);
         }
 
-        void SetGUID(ObjectGuid guid, int32 type) override
+        void SetGUID(ObjectGuid const& guid, int32 type = 0) override
         {
             if (type == DATA_ICE_LANCE_GUID)
             {
@@ -1278,6 +1278,8 @@ struct spell_hagara_the_stormbinder_icy_tomb_dummy : public SpellScript
 
 struct spell_hagara_the_stormbinder_icy_tomb : public AuraScript
 {
+    PrepareAuraScript(spell_hagara_the_stormbinder_icy_tomb);
+
     void OnApply(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
     {
         if (!GetCaster() || !GetUnitOwner())
@@ -1297,6 +1299,8 @@ struct spell_hagara_the_stormbinder_icy_tomb : public AuraScript
 
 struct spell_hagara_the_stormbinder_lightning_conduit : public AuraScript
 {
+    PrepareAuraScript(spell_hagara_the_stormbinder_lightning_conduit);
+
     class AnyPlayerOrCrystalCheck
     {
     public:
@@ -1330,9 +1334,12 @@ struct spell_hagara_the_stormbinder_lightning_conduit : public AuraScript
         GetCaster()->CastSpell(GetTarget(), SPELL_LIGHTNING_CONDUIT_DMG, true);
 
         std::list<Player*> players;
-        AnyPlayerOrCrystalCheck check(GetTarget(), 10.0f);
-        Trinity::PlayerListSearcher<AnyPlayerOrCrystalCheck> searcher(GetTarget(), players, check);
-        GetTarget()->VisitNearbyObject(10.0f, searcher);
+        GetTarget()->GetPlayerListInGrid(players, 10.0f);
+        players.remove_if([this](Player* u)
+        {
+            AnyPlayerOrCrystalCheck check(GetTarget(), 10.0f);
+            return !check(u);
+        });
 
         if (Creature* pCrystal = GetTarget()->FindNearestCreature(NPC_CRYSTAL_CONDUCTOR, 10.0f))
             if (!pCrystal->AI()->GetData(DATA_CRYSTAL_OVERLOADED))
@@ -1374,7 +1381,7 @@ void AddSC_boss_hagara()
     RegisterCreatureAI(npc_hagara_the_stormbinder_collapsing_icicle);
     RegisterSpellScript(spell_hagara_the_stormbinder_icy_tomb_aoe);
     RegisterSpellScript(spell_hagara_the_stormbinder_icy_tomb_dummy);
-    RegisterAuraScript(spell_hagara_the_stormbinder_icy_tomb);
-    RegisterAuraScript(spell_hagara_the_stormbinder_lightning_conduit);
+    RegisterSpellScript(spell_hagara_the_stormbinder_icy_tomb);
+    RegisterSpellScript(spell_hagara_the_stormbinder_lightning_conduit);
 }
 

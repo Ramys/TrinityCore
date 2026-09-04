@@ -28,6 +28,7 @@ ObjectData const creatureData[] =
     { NPC_KOHCROM,                          DATA_KOHCROM                            },
     { NPC_WARLORD_ZONOZZ,                   DATA_WARLORD_ZONOZZ                     },
     { NPC_YORSAHJ_THE_UNSLEEPING,           DATA_YORSAHJ_THE_UNSLEEPING             },
+    { NPC_HAGARA_THE_STORMBINDER,           DATA_HAGARA_THE_STORMBINDER             },
     { BOSS_MADNESS_OF_DEATHWING,            DATA_MADNESS_OF_DEATHWING               },
     { NPC_DEATHWING_MADNESS_OF_DEATHWING,   DATA_DEATHWING_MADNESS_OF_DEATHWING     },
     { NPC_THRALL_MADNESS_OF_DEATHWING,      DATA_THRALL_MADNESS_OF_DEATHWING        },
@@ -74,6 +75,7 @@ public:
                 case NPC_KOHCROM:
                 case NPC_WARLORD_ZONOZZ:
                 case NPC_YORSAHJ_THE_UNSLEEPING:
+                case NPC_HAGARA_THE_STORMBINDER:
                 case NPC_VALEERA:
                 case NPC_EIENDORMI:
                 case NPC_YSERA_MADNESS_OF_DEATHWING:
@@ -105,11 +107,13 @@ public:
                     return GetBossState(DATA_MORCHOK) == DONE;
                 case DATA_YORSAHJ_THE_UNSLEEPING:
                     // Blizzlike sequencial: Yor'sahj apos Zon'ozz DONE (2o -> 3o boss DS)
-                    // Para liberar ambos apos Morchok (paralelo) troque para DATA_MORCHOK
-                    // Dossie Cata Classic: Morchok libera Zon'ozz e Yor'sahj em paralelo; mantido Morchok aqui para atender pergunta, com fallback sequencial comentado
                     if (GetBossState(DATA_WARLORD_ZONOZZ) == DONE)
                         return true;
                     return GetBossState(DATA_MORCHOK) == DONE;
+                case DATA_HAGARA_THE_STORMBINDER:
+                    // Blizzlike sequencial: Hagara (4o boss) so apos Yor'sahj DONE
+                    // C++ boss_hagara JustEngagedWith -> EnterEvadeMode(EVADE_REASON_SEQUENCE_BREAK) se Yor'sahj != DONE
+                    return GetBossState(DATA_YORSAHJ_THE_UNSLEEPING) == DONE;
                 default:
                     break;
             }
