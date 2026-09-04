@@ -2,6 +2,7 @@
 
 ## SUMARIO
 
+0. [RAIZ DE DADOS PINADA — ANTI-1054](#0-raiz-de-dados-pinada--regra-anti-1054-obrigatoria)
 1. [ESTRUTURA DO PROJETO](#1-estrutura-do-projeto)
 2. [PADRAO DE SCRIPTS C++](#2-padrao-de-scripts-c)
 3. [BOSS/RAID TEMPLATE](#3-bossraid-template)
@@ -17,6 +18,74 @@
 13. [SISTEMA DE EVENTOS](#13-sistema-de-eventos)
 14. [MOVEMENT GENERATORS](#14-movement-generators)
 15. [COMPATIBILIDADE E GOTCHAS CATA 4.3.4](#15-compatibilidade-e-gotchas-cata-434)
+
+---
+
+## 0. RAIZ DE DADOS PINADA — REGRA ANTI-1054 (OBRIGATÓRIA)
+
+> **Erro que este guia previne:** `1054 Unknown column 'spawndist' / 'wander_distance' / 'dynamicflags' / 'OptionIndex' / 'menu_id' in 'field list'` ao executar `INSERT INTO creature` / `gossip_menu_option`.
+
+### 0.1 TDB raiz pinada
+
+- **Arquivo raiz deste projeto:** `TDB_full_world_434.22011_2022_01_09.sql` (schema 2022).
+- **NUNCA usar `sql/base/dev/world_database.sql` como referência isolada** — ele diverge do TDB raiz em colunas críticas.
+- **Todo SQL criado/atualizado DEVE ser validado contra o schema da raiz pinada**, não contra `dev` ou docs genéricos.
+
+### 0.2 Schemas divergentes (causa do 1054)
+
+**`creature` — raiz 2022 (correta para este projeto):**
+```sql
+`guid`,`id`,`map`,`zoneId`,`areaId`,`spawnMask`,`phaseUseFlags`,`phaseMask`,`PhaseId`,`PhaseGroup`,`terrainSwapMap`,`modelid`,`equipment_id`,`position_x`,`position_y`,`position_z`,`orientation`,`spawntimesecs`,`spawndist`,`currentwaypoint`,`curhealth`,`curmana`,`MovementType`,`npcflag`,`unit_flags`,`dynamicflags`,`ScriptName`,`VerifiedBuild`
+-- PK guid. `spawndist` EXISTE, `wander_distance` NÃO existe. `dynamicflags`+`ScriptName`+`VerifiedBuild` existem. Phase cols completas obrigatórias.
+```
+
+**`creature` — `sql/base/dev/world_database.sql` (divergente, NÃO usar como INSERT base):**
+- Mesmo `spawndist`/`dynamicflags`, mas se você copiar template antigo sem `phaseUseFlags/PhaseId/PhaseGroup/terrainSwapMap/equipment_id/ScriptName` gera 1054 ou dados truncados.
+
+**Migração que NÃO foi aplicada nesta raiz (e não deve ser assumida):**
+```sql
+-- sql/updates/world/4.3.4/3/2022_12_20_00_world.sql
+ALTER TABLE `creature` CHANGE COLUMN `spawndist` `wander_distance` FLOAT NOT NULL DEFAULT '0';
+-- Esta raiz 2022-01-09 NÃO tem `wander_distance`. Usar `wander_distance` aqui = 1054.
+-- Updates posteriores (2022_12_26_*) já usam `wander_distance` e só valem após aplicar a alteração acima.
+```
+
+**`gossip_menu_option` — raiz 2022 (correta):**
+```sql
+`MenuId`,`OptionIndex`,`OptionIcon`,`OptionText`,`OptionBroadcastTextId`,`OptionType`,`OptionNpcflag`,`VerifiedBuild`
+-- PK (`MenuId`,`OptionIndex`). NÃO existe `menu_id`,`id`,`option_text`,`box_coded` nesta raiz.
+```
+
+**`gossip_menu_option` — legado / TDBs antigos / tutoriais:**
+```sql
+-- `menu_id`,`id`,`option_icon`,`option_text`,`box_coded`,`box_money`,`box_text` — LEGADO, gera 1054 nesta raiz.
+```
+
+### 0.3 Workflow obrigatório antes de qualquer CREATE/UPDATE SQL
+
+1. **Extrair schema da raiz pinada:**
+   ```powershell
+   Select-String -Path 'TDB_full_world_434.22011_2022_01_09.sql' -Pattern 'CREATE TABLE .creature`' -Context 0,30
+   Select-String -Path 'TDB_full_world_434.22011_2022_01_09.sql' -Pattern 'CREATE TABLE .gossip_menu_option`' -Context 0,15
+   ```
+2. **Conferir colunas do INSERT contra o `CREATE TABLE` extraído** — nome e ordem exatos. Se faltar `phaseUseFlags,PhaseId,PhaseGroup,terrainSwapMap,equipment_id,ScriptName,VerifiedBuild` ou usar `wander_distance`/`menu_id`, corrigir.
+3. **Teste a seco:** executar o SQL em DB de teste clonado da raiz pinada (`mysql -f world < seu.sql` deve dar 0 erros). `1054` = abortar, não commitar.
+4. **Padrão de INSERT seguro (evita duplicata e expõe schema errado cedo):**
+   ```sql
+   INSERT INTO `creature` (`guid`,`id`,`map`,`zoneId`,`areaId`,`spawnMask`,`phaseUseFlags`,`phaseMask`,`PhaseId`,`PhaseGroup`,`terrainSwapMap`,`modelid`,`equipment_id`,`position_x`,`position_y`,`position_z`,`orientation`,`spawntimesecs`,`spawndist`,`currentwaypoint`,`curhealth`,`curmana`,`MovementType`,`npcflag`,`unit_flags`,`dynamicflags`,`ScriptName`,`VerifiedBuild`)
+   SELECT 900001, 55308, 967, 0, 0, 15, 0, 1, 0, 0, -1, 0, 0, x, y, z, o, 120, 0, 0, 0, 0, 0, 0, 0, 0, '', 0
+   FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM `creature` WHERE `guid`=900001);
+   ```
+5. **Local de arquivos:** `sql/custom/world/*.sql` para conteúdo novo isolado; `sql/updates/world/4.3.4/*.sql` para migração versionada. Nunca commitar SQL testado só contra `dev`.
+
+### 0.4 Checklist de PR SQL (bloqueante)
+
+- [ ] `CREATE TABLE` da raiz pinada conferido e colado no comentário do SQL (`-- raiz: TDB_full... usa spawndist+dynamicflags`)
+- [ ] `INSERT` lista todas as colunas NOT NULL da tabela (sem `SELECT *` ou coluna implícita)
+- [ ] Executado em DB clonado da raiz pinada sem `1054`/`1060`/`1136`
+- [ ] `gossip_menu_option` usa `MenuId,OptionIndex,OptionIcon,OptionText,OptionBroadcastTextId,OptionType,OptionNpcflag` (não `menu_id/id`)
+- [ ] `creature` usa `spawndist` (não `wander_distance`) nesta raiz
+- [ ] `DELETE FROM` + `INSERT ... SELECT ... WHERE NOT EXISTS` para idempotência
 
 ---
 
@@ -709,19 +778,31 @@ INSERT INTO `creature_template_addon` (`entry`, `path_id`, `mount`, `bytes1`, `b
 VALUES (123456, 0, 0, 0, 1, 0, 0, 0, 0, '');
 ```
 
-### 6.3 Creature spawn
+### 6.3 Creature spawn — RAIZ PINADA (anti-1054)
+
+> **Raiz:** `TDB_full_world_434.22011_2022_01_09.sql`. **Usar `spawndist`**, nunca `wander_distance` nesta raiz.
+> `wander_distance` só existe após `ALTER TABLE creature CHANGE spawndist wander_distance` de `2022_12_20_00_world.sql` — não aplicado nesta raiz = 1054.
 
 ```sql
-INSERT INTO `creature` (`guid`, `id`, `map`, `zoneId`, `areaId`, `spawnMask`,
-    `phaseMask`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`,
-    `orientation`, `spawntimesecs`, `spawndist`, `currentwaypoint`, `curhealth`,
-    `curmana`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`,
-    `VerifiedBuild`)
-VALUES
-    (123456, 123456, 0, 0, 0, 1,
-     1, 0, 1, x, y, z,
-     o, 7200, 0, 0, 100000,
-     0, 0, 0, 0, 0, 0);
+-- Template CANÔNICO para esta raiz (28 cols, ordem exata do CREATE TABLE)
+INSERT INTO `creature` (`guid`,`id`,`map`,`zoneId`,`areaId`,`spawnMask`,`phaseUseFlags`,`phaseMask`,`PhaseId`,`PhaseGroup`,`terrainSwapMap`,`modelid`,`equipment_id`,`position_x`,`position_y`,`position_z`,`orientation`,`spawntimesecs`,`spawndist`,`currentwaypoint`,`curhealth`,`curmana`,`MovementType`,`npcflag`,`unit_flags`,`dynamicflags`,`ScriptName`,`VerifiedBuild`)
+SELECT 900001, 123456, 0, 0, 0, 1, 0, 1, 0, 0, -1, 0, 0, 100.0, 100.0, 50.0, 0.0, 7200, 0, 0, 100000, 0, 0, 0, 0, 0, '', 0
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM `creature` WHERE `guid`=900001);
+-- Valores: phaseUseFlags=0, phaseMask=1, PhaseId=0, PhaseGroup=0, terrainSwapMap=-1, equipment_id=0, spawndist=0, ScriptName='', VerifiedBuild=0
+
+-- Se precisar UPDATE (evita duplicar INSERT):
+-- UPDATE `creature` SET `position_x`=100.0, `position_y`=100.0, `spawndist`=5 WHERE `guid`=900001;
+```
+
+**Erros comuns que geram 1054:**
+- `Unknown column 'wander_distance'` -> troque por `spawndist`
+- `Unknown column 'dynamicflags' in field list` -> você omitiu `dynamicflags` (ou usou dump antigo sem a coluna)
+- `Unknown column 'phaseUseFlags'` -> INSERT incompleto copiado de `sql/base/dev` antigo ou wiki desatualizada
+
+**Validação obrigatória antes de commitar (ver §0.3):**
+```powershell
+Select-String -Path 'TDB_full_world_434.22011_2022_01_09.sql' -Pattern 'CREATE TABLE `creature`' -Context 0,30
+mysql -f world < seu.sql  # deve retornar 0 erros
 ```
 
 ### 6.4 Boss loot
@@ -783,6 +864,33 @@ VALUES
 
 groupid = categoria (0=aggro, 1=kill, 2=death, 3=spell, etc)
 type: 12=chat, 14=yell, 16=whisper, 41=emote
+
+### 6.7 Gossip menu / gossip_menu_option — RAIZ PINADA (anti-1054)
+
+> **Raiz:** `TDB_full_world_434.22011_2022_01_09.sql`. Colunas são `MenuId/OptionIndex` (PascalCase), não `menu_id/id`.
+
+```sql
+-- gossip_menu (FK do menu)
+INSERT INTO `gossip_menu` (`MenuId`,`TextId`,`VerifiedBuild`) VALUES (90000, 12345, 0);
+
+-- gossip_menu_option (CANÔNICO para esta raiz — 8 cols)
+INSERT INTO `gossip_menu_option` (`MenuId`,`OptionIndex`,`OptionIcon`,`OptionText`,`OptionBroadcastTextId`,`OptionType`,`OptionNpcflag`,`VerifiedBuild`)
+VALUES (90000, 0, 0, 'Teleport to Boss', 0, 1, 1, 0);
+-- OptionType: 1=GOSSIP, 2=QUEST, etc. OptionIcon: 0=chat bubble, 2=vendor, etc.
+
+-- Tabelas auxiliares (se precisar caixa de texto / ação):
+INSERT INTO `gossip_menu_option_box` (`MenuId`,`OptionIndex`,`BoxCoded`,`BoxMoney`,`BoxText`,`BoxBroadcastTextId`) VALUES (90000, 0, 0, 0, '', 0);
+INSERT INTO `gossip_menu_option_action` (`MenuId`,`OptionIndex`,`ActionMenuId`,`ActionPoiId`) VALUES (90000, 0, 90001, 0);
+```
+
+**Erros comuns que geram 1054:**
+- `Unknown column 'OptionIndex' / 'menu_id' / 'option_text'` -> você usou nomes legados (`menu_id`,`id`,`option_icon`,`option_text`,`box_coded`) de TDB antigo/tutorial. Troque para `MenuId,OptionIndex,OptionIcon,OptionText...`
+- `Unknown column 'BoxText'` em `gossip_menu_option` -> `BoxText` está em `gossip_menu_option_box`, não em `gossip_menu_option`
+
+**Validação:**
+```powershell
+Select-String -Path 'TDB_full_world_434.22011_2022_01_09.sql' -Pattern 'CREATE TABLE `gossip_menu_option`' -Context 0,15
+```
 
 ---
 

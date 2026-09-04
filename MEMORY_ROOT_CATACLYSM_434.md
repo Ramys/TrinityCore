@@ -5,6 +5,31 @@
 
 ---
 
+## 0. RAIZ DE DADOS PINADA — ANTI-1054 (BLOQUEANTE)
+
+**Arquivo raiz pinado:** `TDB_full_world_434.22011_2022_01_09.sql` (schema 2022) — ver `CRULES.md §0` para regra completa.
+
+**Regra de ouro:** Todo `INSERT`/`UPDATE`/`CREATE` SQL DEVE ser validado contra o `CREATE TABLE` extraído da raiz pinada. `sql/base/dev/world_database.sql` diverge e NÃO pode ser usado isoladamente.
+
+**`creature` nesta raiz (28 cols, ordem exata):**
+```sql
+`guid`,`id`,`map`,`zoneId`,`areaId`,`spawnMask`,`phaseUseFlags`,`phaseMask`,`PhaseId`,`PhaseGroup`,`terrainSwapMap`,`modelid`,`equipment_id`,`position_x`,`position_y`,`position_z`,`orientation`,`spawntimesecs`,`spawndist`,`currentwaypoint`,`curhealth`,`curmana`,`MovementType`,`npcflag`,`unit_flags`,`dynamicflags`,`ScriptName`,`VerifiedBuild`
+-- `spawndist` SIM, `wander_distance` NÃO. `dynamicflags`/`ScriptName`/`VerifiedBuild` obrigatórios. Fase cols `phaseUseFlags,PhaseId,PhaseGroup,terrainSwapMap` obrigatórias.
+-- ERRO `1054 Unknown column 'wander_distance'` = você usou `wander_distance` sem ter aplicado `2022_12_20_00_world.sql` (ALTER spawndist->wander_distance). Nesta raiz, use `spawndist`.
+```
+
+**`gossip_menu_option` nesta raiz (8 cols):**
+```sql
+`MenuId`,`OptionIndex`,`OptionIcon`,`OptionText`,`OptionBroadcastTextId`,`OptionType`,`OptionNpcflag`,`VerifiedBuild`
+-- PK (`MenuId`,`OptionIndex`). Legado `menu_id,id,option_text,box_coded` NÃO existe = 1054.
+```
+
+**Workflow antes de qualquer SQL (CRULES §0.3):** `Select-String -Path 'TDB_full_world_434.22011_2022_01_09.sql' -Pattern 'CREATE TABLE .creature`' -Context 0,30` → conferir INSERT col a col → `mysql -f world < seu.sql` em DB clonado da raiz (0 erros).
+
+**Templates canônicos:** `CRULES.md §6.3` (creature) e `§6.7` (gossip_menu_option) — copiar de lá.
+
+---
+
 ## 1. Estrutura de Scripts
 
 ```

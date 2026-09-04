@@ -8,13 +8,23 @@ O objetivo principal é garantir que todas as correções em **banco de dados (D
 
 ---
 
+## 0. RAIZ DE DADOS PINADA — REGRA ANTI-1054 (BLOQUEANTE PARA TODO AGENTE)
+
+> **Previne:** `1054 Unknown column 'spawndist'/'wander_distance'/'dynamicflags'/'OptionIndex'/'menu_id'` em `INSERT INTO creature` / `gossip_menu_option`.
+
+- **TDB raiz pinada (única fonte de verdade para schema):** `TDB_full_world_434.22011_2022_01_09.sql` (schema 2022) — ver `CRULES.md §0` para regra completa. `sql/base/dev/world_database.sql` DIVERGE e não pode ser usado isoladamente como base de INSERT.
+- **`creature` nesta raiz:** 28 cols `guid,id,map,zoneId,areaId,spawnMask,phaseUseFlags,phaseMask,PhaseId,PhaseGroup,terrainSwapMap,modelid,equipment_id,position_x,position_y,position_z,orientation,spawntimesecs,spawndist,currentwaypoint,curhealth,curmana,MovementType,npcflag,unit_flags,dynamicflags,ScriptName,VerifiedBuild` — `spawndist` SIM, `wander_distance` NÃO (essa é de `2022_12_20_00_world.sql`, não aplicado nesta raiz).
+- **`gossip_menu_option` nesta raiz:** 8 cols `MenuId,OptionIndex,OptionIcon,OptionText,OptionBroadcastTextId,OptionType,OptionNpcflag,VerifiedBuild` — legado `menu_id,id,option_text,box_coded` NÃO existe.
+- **Workflow obrigatório antes de qualquer SQL (CRULES §0.3):** extrair `CREATE TABLE` da raiz pinada (`Select-String -Path 'TDB_full_world_434.22011_2022_01_09.sql' -Pattern 'CREATE TABLE .creature`'`), conferir INSERT coluna a coluna, testar `mysql -f world < seu.sql` em DB clonado da raiz (0 erros). Templates canônicos em `CRULES §6.3` e `§6.7`. Sem isso, PR SQL é bloqueado.
+
 ## 1. Fonte da Verdade: `CRULES.md`
 
 O arquivo **[`CRULES.md`](https://github.com/Ramys/TrinityCore/blob/master/CRULES.md)** é o documento mais importante para um agente de IA. Ele contém as regras de codificação específicas para este projeto.
 
 **Ações Obrigatórias:**
-- **Leia e internalize** todo o conteúdo do `CRULES.md` antes de qualquer ação.
+- **Leia e internalize** todo o conteúdo do `CRULES.md` antes de qualquer ação — começando por `§0 RAIZ DE DADOS PINADA — ANTI-1054`.
 - Use suas diretrizes como a **base para todas as decisões de código**, desde a nomenclatura de variáveis até a estrutura de correções SQL.
+- **Nunca gere SQL sem validar contra a raiz pinada** — ignorar `CRULES §0` gera `1054` e quebra o world DB.
 
 ---
 
@@ -34,11 +44,14 @@ Todo agente deve seguir este fluxo de trabalho rigoroso para evitar erros e inco
     - Se for criar uma nova issue, siga o template fornecido no repositório (`issue_template.md`).
 
 ### 2.2. Durante a Correção
-1.  **Para Correções SQL:**
-    - Localize o arquivo correto dentro da estrutura `sql/`.
-    - Siga os padrões de nomenclatura e estrutura vistos em outros arquivos do projeto.
+1.  **Para Correções SQL (ANTI-1054 — ver CRULES §0, §6.3, §6.7):**
+    - **Antes de qualquer INSERT/UPDATE:** extraia o `CREATE TABLE` da raiz pinada `TDB_full_world_434.22011_2022_01_09.sql` (`Select-String -Pattern 'CREATE TABLE .creature`' / 'gossip_menu_option`'`) e confira coluna a coluna. Nunca copie template de `sql/base/dev` ou wiki sem validar.
+    - **`creature`:** use `spawndist` (não `wander_distance`) + 28 cols completas com `phaseUseFlags,PhaseId,PhaseGroup,terrainSwapMap,equipment_id,ScriptName,VerifiedBuild,dynamicflags` — ver `CRULES §6.3`.
+    - **`gossip_menu_option`:** use `MenuId,OptionIndex,OptionIcon,OptionText,OptionBroadcastTextId,OptionType,OptionNpcflag,VerifiedBuild` — legado `menu_id,id,option_text,box_coded` gera 1054 — ver `CRULES §6.7`.
+    - Localize o arquivo correto dentro da estrutura `sql/` (`sql/custom/world/*.sql` para novo isolado, `sql/updates/world/4.3.4/*.sql` para migração).
+    - Siga os padrões de nomenclatura e estrutura vistos em outros arquivos do projeto + template canônico `INSERT ... SELECT ... WHERE NOT EXISTS` (idempotente).
     - **Nunca crie novas tabelas ou colunas** sem uma justificativa clara e alinhada com uma issue ou com a documentação do jogo (patch 4.3.4).
-    - Teste suas queries em um ambiente de desenvolvimento antes de propor.
+    - Teste suas queries em DB clonado da raiz pinada (`mysql -f world < seu.sql` deve dar 0 erros) antes de propor — `1054` = abortar.
 
 2.  **Para Correções em Scripts C++:**
     - Siga os padrões de código definidos no `.clang-format`.
@@ -69,7 +82,8 @@ Todo agente deve seguir este fluxo de trabalho rigoroso para evitar erros e inco
 Para evitar "invenções" e manter a integridade do projeto, os agentes devem **evitar rigidamente**:
 
 - **Criar soluções do zero** quando uma base de dados ou script similar já existe.
-- **Alterar estruturas de dados (DB/MySQL)** sem base em uma issue ou na documentação do jogo.
+- **Alterar estruturas de dados (DB/MySQL)** sem base em uma issue ou na documentação do jogo — e nunca assumir `wander_distance` sem ter aplicado `ALTER TABLE creature CHANGE spawndist wander_distance` (ver CRULES §0.2).
+- **Gerar INSERT com colunas divergentes da raiz pinada** (`wander_distance` em vez de `spawndist`, `menu_id/id` em vez de `MenuId/OptionIndex`, omitir `phaseUseFlags/PhaseId/PhaseGroup/terrainSwapMap/dynamicflags/ScriptName`) — causa `1054`.
 - **Implementar lógicas de jogo** baseadas em suposições. Toda ação deve ser fundamentada em fatos ou dados concretos.
 - **Ignorar os padrões de código** estabelecidos (C++, SQL, formatação).
 - **Propor correções que não passem no sistema de CI** (build e testes).
