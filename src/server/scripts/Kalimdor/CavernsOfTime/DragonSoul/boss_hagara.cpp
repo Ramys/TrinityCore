@@ -770,3 +770,96 @@ private:
     }
 };
 
+
+class npc_hagara_the_stormbinder_ice_wave : public CreatureScript
+{
+public:
+    npc_hagara_the_stormbinder_ice_wave() : CreatureScript("npc_hagara_the_stormbinder_ice_wave") { }
+
+    struct npc_hagara_the_stormbinder_ice_waveAI : public ScriptedAI
+    {
+        npc_hagara_the_stormbinder_ice_waveAI(Creature* creature) : ScriptedAI(creature)
+        {
+            me->SetReactState(REACT_PASSIVE);
+            circlePoint = 0;
+            bDespawn = false;
+            bMain = false;
+            _instance = me->GetInstanceScript();
+            SetCombatMovement(false);
+        }
+
+        void MovementInform(uint32 type, uint32 pointId) override
+        {
+            if (bDespawn)
+                return;
+
+            if (type == POINT_MOTION_TYPE)
+            {
+                if (pointId == POINT_ICE_WAVE_MOVE)
+                {
+                    if (bMain)
+                    {
+                        UpdateNextPoint();
+                        for (uint8 i = 0; i < 4; ++i)
+                        {
+                            if (Creature* pWave = me->SummonCreature(NPC_ICE_WAVE, circlePos[circlePoint][i]))
+                            {
+                                pWave->SetSpeed(MOVE_RUN, 0.8f - 0.1f * i, true);
+                                pWave->AI()->SetData(DATA_CIRCLE_POINT, circlePoint);
+                                pWave->AI()->SetData(DATA_MAIN_WAVE, ((i == 0) ? 1 : 0));
+                                pWave->GetMotionMaster()->MovePoint(POINT_ICE_WAVE_MOVE, circlePos[(circlePoint < 17 ? circlePoint + 1 : 0)][i]);
+                            }
+                        }
+                    }
+                    me->DespawnOrUnsummon(500);
+                }
+            }
+        }
+
+        void SetData(uint32 type, uint32 data) override
+        {
+            if (type == DATA_CIRCLE_POINT)
+                circlePoint = (uint8)data;
+            else if (type == DATA_MAIN_WAVE)
+                bMain = (data != 0);
+        }
+
+        void DoAction(int32 action) override
+        {
+            if (action == ACTION_ICE_WAVE_MOVE)
+                me->GetMotionMaster()->MovePoint(POINT_ICE_WAVE_MOVE, circlePos[UpdateNextPoint()][0]);
+        }
+
+        void UpdateAI(uint32 /*diff*/) override
+        {
+            if (bDespawn)
+                return;
+
+            if (_instance && _instance->GetBossState(DATA_HAGARA_THE_STORMBINDER) != IN_PROGRESS)
+            {
+                bDespawn = true;
+                me->DespawnOrUnsummon(100);
+            }
+        }
+
+    private:
+        bool bDespawn;
+        bool bMain;
+        uint8 circlePoint;
+        InstanceScript* _instance;
+
+        uint8 UpdateNextPoint()
+        {
+            circlePoint++;
+            if (circlePoint > 17)
+                circlePoint = 0;
+            return circlePoint;
+        }
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return GetDragonSoulAI<npc_hagara_the_stormbinder_ice_waveAI>(creature);
+    }
+};
+
