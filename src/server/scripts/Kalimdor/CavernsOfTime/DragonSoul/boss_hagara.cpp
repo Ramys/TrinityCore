@@ -291,6 +291,7 @@ enum Adds
     NPC_FROZEN_TEMPEST        = 55370,
     NPC_BINDING_CRYSTAL       = 56136,
     NPC_ICE_WAVE              = 56104,
+    NPC_ICE_LANCE             = 56108,
     NPC_ICICLE                = 57867,
     NPC_CRYSTAL_CONDUCTOR     = 56165,
     NPC_BOUND_LIGHTNING_ELEM  = 56700
@@ -430,5 +431,238 @@ public:
             events.ScheduleEvent(EVENT_ICE_WAVE_MOVE, 50ms);
         else if (action == ACTION_CRYSTAL_DIED)
             _dummyfrif = true;
+    }
+
+
+    void UpdateAI(uint32 diff) override
+    {
+        if (!UpdateVictim())
+            return;
+
+        events.Update(diff);
+
+        if (me->HasUnitState(UNIT_STATE_CASTING))
+            return;
+
+        while (uint32 eventId = events.ExecuteEvent())
+        {
+            switch (eventId)
+            {
+                case EVENT_BERSERK:
+                    DoCastSelf(SPELL_BERSERK, true);
+                    break;
+                case EVENT_SHATTERED_ICE:
+                {
+                    Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1, 0.0f, true);
+                    if (!target)
+                        target = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true);
+                    if (target)
+                        DoCast(target, SPELL_SHATTERED_ICE);
+                    events.ScheduleEvent(EVENT_SHATTERED_ICE, 10500ms);
+                    break;
+                }
+                case EVENT_FOCUSED_ASSAULT:
+                    DoCastVictim(SPELL_FOCUSED_ASSAULT);
+                    events.ScheduleEvent(EVENT_FOCUSED_ASSAULT, 15s);
+                    break;
+                case EVENT_ICY_TOMB:
+                    Talk(SAY_ICETOMB);
+                    me->CastSpell(nullptr, SPELL_ICY_TOMB_AOE, CastSpellExtraArgs(SPELLVALUE_MAX_TARGETS, RAID_MODE(2, 5, 2, 6)));
+                    events.ScheduleEvent(EVENT_ICY_TOMB, 20s);
+                    break;
+                case EVENT_ICE_LANCE:
+                {
+                    UnitList targets;
+                    SelectTargetList(targets, 3, SELECT_TARGET_NEAREST, 0.0f, true);
+                    if (targets.empty())
+                        break;
+                    Talk(SAY_ICELANCE);
+                    uint8 i = 0;
+                    for (UnitList::const_iterator itr = targets.begin(); itr != targets.end(); ++itr)
+                    {
+                        if (Creature* pLance = me->SummonCreature(NPC_ICE_LANCE, icelancePos[i], TEMPSUMMON_TIMED_DESPAWN, 15s))
+                            pLance->AI()->SetGUID((*itr)->GetGUID(), DATA_ICE_LANCE_GUID);
+                        ++i;
+                    }
+                    events.ScheduleEvent(EVENT_ICE_LANCE, 12s);
+                    break;
+                }
+
+                case EVENT_FROZEN_TEMPEST_1:
+                    events.CancelEvent(EVENT_SHATTERED_ICE);
+                    events.CancelEvent(EVENT_ICY_TOMB);
+                    events.CancelEvent(EVENT_ICE_LANCE);
+                    events.CancelEvent(EVENT_FOCUSED_ASSAULT);
+                    me->SetReactState(REACT_PASSIVE);
+                    me->AttackStop();
+                    me->NearTeleportTo(centerPos.GetPositionX(), centerPos.GetPositionY(), centerPos.GetPositionZ(), centerPos.GetOrientation());
+                    events.ScheduleEvent(EVENT_FROZEN_TEMPEST_2, 1500ms);
+                    break;
+                case EVENT_FROZEN_TEMPEST_2:
+                {
+                    _specialPhase = true;
+                    _crystalCount = 4;
+                    _phase = PHASE_ICE;
+                    for (uint8 i = 0; i < 4; ++i)
+                        if (Creature* pCrystal = me->SummonCreature(NPC_BINDING_CRYSTAL, frozencrystalPos[i]))
+                            pCrystal->CastSpell(me, SPELL_CRYSTALLINE_TETHER_1);
+                    DoCastSelf(SPELL_FROZEN_TEMPEST);
+                    events.ScheduleEvent(EVENT_ICE_WAVE, 6s);
+                    events.ScheduleEvent(EVENT_ICICLE, 2s);
+                    events.ScheduleEvent(EVENT_WATERY_ENTRENCHMENT, 7s);
+                    events.ScheduleEvent(EVENT_END_SPECIAL_PHASE, 305s);
+                    if (me->GetMap()->IsHeroic())
+                        events.ScheduleEvent(EVENT_FROSTFLAKE, urand(2000, 5000));
+                    break;
+                }
+                case EVENT_WATERY_ENTRENCHMENT:
+                {
+                    if (instance)
+                    {
+                        Map::PlayerList const& plrList = me->GetMap()->GetPlayers();
+                        if (!plrList.isEmpty())
+                        {
+                            for (Map::PlayerList::const_iterator itr = plrList.begin(); itr != plrList.end(); ++itr)
+                                if (Player* player = itr->GetSource())
+                                {
+                                    if (me->GetDistance(player) <= 23.0f)
+                                    {
+                                        if (!player->HasAura(SPELL_WATERY_ENTRENCHMENT))
+                                            player->CastSpell(player, SPELL_WATERY_ENTRENCHMENT, true);
+                                    }
+                                    else
+                                        player->RemoveAurasDueToSpell(SPELL_WATERY_ENTRENCHMENT);
+                                }
+                        }
+                    }
+                    events.ScheduleEvent(EVENT_WATERY_ENTRENCHMENT, 1s);
+                    break;
+                }
+                case EVENT_ICE_WAVE:
+                {
+                    Talk(SAY_ICE_WAVE);
+                    if (Creature* pWave = me->SummonCreature(NPC_ICE_WAVE, me->GetPosition(), TEMPSUMMON_TIMED_DESPAWN, 20s))
+                    {
+                        pWave->AI()->SetData(DATA_CIRCLE_POINT, 0);
+                        pWave->AI()->SetData(DATA_MAIN_WAVE, 1);
+                        pWave->GetMotionMaster()->MovePoint(POINT_ICE_WAVE, circlePos[0][0]);
+                    }
+                    if (Creature* pWave = me->SummonCreature(NPC_ICE_WAVE, me->GetPosition(), TEMPSUMMON_TIMED_DESPAWN, 20s))
+                    {
+                        pWave->AI()->SetData(DATA_CIRCLE_POINT, 5);
+                        pWave->AI()->SetData(DATA_MAIN_WAVE, 1);
+                        pWave->GetMotionMaster()->MovePoint(POINT_ICE_WAVE, circlePos[5][0]);
+                    }
+                    if (Creature* pWave = me->SummonCreature(NPC_ICE_WAVE, me->GetPosition(), TEMPSUMMON_TIMED_DESPAWN, 20s))
+                    {
+                        pWave->AI()->SetData(DATA_CIRCLE_POINT, 9);
+                        pWave->AI()->SetData(DATA_MAIN_WAVE, 1);
+                        pWave->GetMotionMaster()->MovePoint(POINT_ICE_WAVE, circlePos[9][0]);
+                    }
+                    if (Creature* pWave = me->SummonCreature(NPC_ICE_WAVE, me->GetPosition(), TEMPSUMMON_TIMED_DESPAWN, 20s))
+                    {
+                        pWave->AI()->SetData(DATA_CIRCLE_POINT, 14);
+                        pWave->AI()->SetData(DATA_MAIN_WAVE, 1);
+                        pWave->GetMotionMaster()->MovePoint(POINT_ICE_WAVE, circlePos[14][0]);
+                    }
+                    events.ScheduleEvent(EVENT_ICE_WAVE_MOVE, 12s);
+                    break;
+                }
+                case EVENT_ICE_WAVE_MOVE:
+                {
+                    Talk(SAY_ICE_WAVE);
+                    EntryCheckPredicate pred(NPC_ICE_WAVE);
+                    summons.DoAction(ACTION_ICE_WAVE_MOVE, pred);
+                    break;
+                }
+                case EVENT_ICICLE:
+                {
+                    UnitList targets;
+                    SelectTargetList(targets, RAID_MODE(3, 7), SELECT_TARGET_RANDOM, 0.0f, true);
+                    if (!targets.empty())
+                        for (UnitList::const_iterator itr = targets.begin(); itr != targets.end(); ++itr)
+                            DoCast((*itr), SPELL_ICICLE, true);
+                    events.ScheduleEvent(EVENT_ICICLE, urand(8000, 9000));
+                    break;
+                }
+                case EVENT_FROSTFLAKE:
+                    DoCastAOE(SPELL_FROSTFLAKE, true);
+                    events.ScheduleEvent(EVENT_FROSTFLAKE, urand(9000, 12000));
+                    break;
+
+                case EVENT_ELECTRICAL_STORM_1:
+                    events.CancelEvent(EVENT_SHATTERED_ICE);
+                    events.CancelEvent(EVENT_ICY_TOMB);
+                    events.CancelEvent(EVENT_ICE_LANCE);
+                    events.CancelEvent(EVENT_FOCUSED_ASSAULT);
+                    me->SetReactState(REACT_PASSIVE);
+                    me->AttackStop();
+                    me->NearTeleportTo(centerPos.GetPositionX(), centerPos.GetPositionY(), centerPos.GetPositionZ(), centerPos.GetOrientation());
+                    events.ScheduleEvent(EVENT_ELECTRICAL_STORM_2, 1500ms);
+                    break;
+                case EVENT_ELECTRICAL_STORM_2:
+                {
+                    _specialPhase = true;
+                    _phase = PHASE_LIGHTNING;
+                    Talk(SAY_LIGHTNING);
+                    if (me->GetMap()->IsHeroic())
+                    {
+                        if (me->GetMap()->Is25ManRaid())
+                        {
+                            _crystalCount = 4;
+                            for (uint8 i = 0; i < 4; ++i)
+                                if (Creature* pConductor = me->SummonCreature(NPC_CRYSTAL_CONDUCTOR, crystalconductorPos[i]))
+                                    pConductor->CastSpell(me, SPELL_CRYSTALLINE_TETHER_2);
+                        }
+                        else
+                        {
+                            _crystalCount = 8;
+                            for (uint8 i = 0; i < 4; ++i)
+                                if (Creature* pConductor = me->SummonCreature(NPC_CRYSTAL_CONDUCTOR, crystalconductorPos[i + 4]))
+                                    pConductor->CastSpell(me, SPELL_CRYSTALLINE_TETHER_2);
+                            for (uint8 i = 0; i < 4; ++i)
+                                if (Creature* pConductor = me->SummonCreature(NPC_CRYSTAL_CONDUCTOR, crystalconductorPos[i]))
+                                    pConductor->CastSpell(me, SPELL_CRYSTALLINE_TETHER_2);
+                        }
+                    }
+                    else
+                    {
+                        _crystalCount = 4;
+                        if (me->GetMap()->Is25ManRaid())
+                            for (uint8 i = 0; i < 4; ++i)
+                                if (Creature* pConductor = me->SummonCreature(NPC_CRYSTAL_CONDUCTOR, crystalconductorPos[i]))
+                                    pConductor->CastSpell(me, SPELL_CRYSTALLINE_TETHER_2);
+                        else
+                            for (uint8 i = 0; i < 4; ++i)
+                                if (Creature* pConductor = me->SummonCreature(NPC_CRYSTAL_CONDUCTOR, crystalconductorPos[i + 4]))
+                                    pConductor->CastSpell(me, SPELL_CRYSTALLINE_TETHER_2);
+                    }
+
+                    me->SummonCreature(NPC_BOUND_LIGHTNING_ELEM, circlePos[0][3]);
+
+                    DoCastSelf(SPELL_WATER_SHIELD);
+
+                    events.ScheduleEvent(EVENT_END_SPECIAL_PHASE, 305s);
+                    if (me->GetMap()->IsHeroic())
+                        events.ScheduleEvent(EVENT_STORM_PILLARS, 5s);
+                    break;
+                }
+                case EVENT_STORM_PILLARS:
+                    DoCastAOE(SPELL_STORM_PILLARS, true);
+                    events.ScheduleEvent(EVENT_STORM_PILLARS, urand(5000, 10000));
+                    break;
+                case EVENT_END_SPECIAL_PHASE:
+                    _crystalCount = 0;
+                    summons.DespawnEntry(NPC_CRYSTAL_CONDUCTOR);
+                    summons.DespawnEntry(NPC_BOUND_LIGHTNING_ELEM);
+                    summons.DespawnEntry(NPC_BINDING_CRYSTAL);
+                    SpecialPhaseEnd();
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        DoMeleeAttackIfReady();
     }
 
