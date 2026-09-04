@@ -104,7 +104,8 @@ enum Events
     EVENT_STORM_PILLARS   = 13,
     EVENT_BERSERK         = 14,
     EVENT_WATERY_ENTRENCHMENT = 15,
-    EVENT_END_SPECIAL_PHASE  = 16
+    EVENT_END_SPECIAL_PHASE  = 16,
+    EVENT_OVERLOAD_END       = 17
 };
 
 enum MiscData
