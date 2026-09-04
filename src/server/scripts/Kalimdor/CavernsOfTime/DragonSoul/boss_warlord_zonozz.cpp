@@ -526,7 +526,12 @@ private:
 };
 
 // =====================================================================
-//  NPC: Go'rath Tentacles (Eye / Flail / Claw)
+//  NPC: Go'rath Tentacles (Eye / Flail / Claw) - FIX tentaculos parados
+//  Bug raiz: SetCombatMovement(false) + sem DoZoneInCombat + sem vitima
+//  => UpdateVictim() sempre false, nenhum evento dispara.
+//  Fix: Eye fica estacionario mas entra em combate; Flail/Claw perseguem.
+//  Normal: Eye decorativo (NON_ATTACKABLE/PASSIVE) nao entra em combate.
+//  Heroic: todos entram em combate via DoZoneInCombat + AttackStart.
 // =====================================================================
 struct npc_warlord_zonozz_tentacle : public ScriptedAI
 {
@@ -543,10 +548,28 @@ struct npc_warlord_zonozz_tentacle : public ScriptedAI
         c->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_SAPPED, true);
         c->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_CHARM, true);
         c->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_DISORIENTED, true);
-        SetCombatMovement(false);
+        // Eye = estacionario (shadow gaze a distancia); Flail/Claw = perseguem
+        if (c->GetEntry() == NPC_EYE_OF_GORATH || c->GetEntry() == NPC_EYE_OF_GORATH_2)
+            SetCombatMovement(false);
+        else
+            SetCombatMovement(true);
+        c->setActive(true);
     }
     EventMap _events;
     void Reset() override { _events.Reset(); }
+
+    void IsSummonedBy(Unit* summoner) override
+    {
+        // Normal: Eye decorativo NON_ATTACKABLE/PASSIVE - nao entra em combate (evita DoZoneInCombat em dummy)
+        if ((me->GetEntry() == NPC_EYE_OF_GORATH || me->GetEntry() == NPC_EYE_OF_GORATH_2) && !me->GetMap()->IsHeroic())
+            return;
+        // Heroic: hero aura ja lancada por boss JustSummoned, mas garantir stack
+        if (me->GetMap()->IsHeroic())
+            if (Unit* boss = summoner)
+                boss->CastSpell(boss, SPELL_BLACK_BLOOD_OF_GORATH, true);
+        DoZoneInCombat();
+    }
+
     void JustEngagedWith(Unit*) override
     {
         switch (me->GetEntry())
@@ -561,20 +584,23 @@ struct npc_warlord_zonozz_tentacle : public ScriptedAI
     }
     void UpdateAI(uint32 diff) override
     {
-        if (!UpdateVictim()) return;
+        if (!UpdateVictim())
+            return;
         _events.Update(diff);
         while (uint32 e = _events.ExecuteEvent())
         {
             switch (e)
             {
-                case EVENT_SLUDGE_SPEW: if (Unit* t = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true)) DoCast(t, SPELL_SLUDGE_SPEW); _events.ScheduleEvent(EVENT_SLUDGE_SPEW, 12s); break;
-                case EVENT_WILD_FLAIL: DoCastAOE(SPELL_WILD_FLAIL); _events.ScheduleEvent(EVENT_WILD_FLAIL, 7s); break;
-                case EVENT_OOZE_SPIT: if (!me->IsWithinMeleeRange(me->GetVictim())) if (Unit* t = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true)) DoCast(t, SPELL_OOZE_SPIT); _events.ScheduleEvent(EVENT_OOZE_SPIT, 6s); break;
-                case EVENT_SHADOW_GAZE: if (Unit* t = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true, true, -int32(SPELL_SHADOW_GAZE))) DoCast(t, SPELL_SHADOW_GAZE); _events.ScheduleEvent(EVENT_SHADOW_GAZE, 8s); break;
+                case EVENT_SLUDGE_SPEW: if (Unit* t = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true)) DoCast(t, SPELL_SLUDGE_SPEW); _events.ScheduleEvent(EVENT_SLUDGE_SPEW, 12s); break;
+                case EVENT_WILD_FLAIL: DoCast(me, SPELL_WILD_FLAIL); _events.ScheduleEvent(EVENT_WILD_FLAIL, 7s); break;
+                case EVENT_OOZE_SPIT: if (!me->IsWithinMeleeRange(me->GetVictim())) if (Unit* t = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true)) DoCast(t, SPELL_OOZE_SPIT); _events.ScheduleEvent(EVENT_OOZE_SPIT, 6s); break;
+                // 6-param: page vitima aleatoria sem aura Shadow Gaze recente, com tank, distancia 100y
+                case EVENT_SHADOW_GAZE: if (Unit* t = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true, true, -int32(SPELL_SHADOW_GAZE))) DoCast(t, SPELL_SHADOW_GAZE); _events.ScheduleEvent(EVENT_SHADOW_GAZE, 8s); break;
                 default: break;
             }
         }
-        if (me->GetEntry() != NPC_EYE_OF_GORATH && me->GetEntry() != NPC_EYE_OF_GORATH_2) DoMeleeAttackIfReady();
+        if (me->GetEntry() != NPC_EYE_OF_GORATH && me->GetEntry() != NPC_EYE_OF_GORATH_2)
+            DoMeleeAttackIfReady();
     }
 };
 
