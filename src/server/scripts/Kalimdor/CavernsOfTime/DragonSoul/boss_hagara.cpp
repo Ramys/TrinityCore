@@ -490,7 +490,7 @@ public:
                     break;
                 case EVENT_ICY_TOMB:
                     Talk(SAY_ICETOMB);
-                    me->CastSpell(nullptr, SPELL_ICY_TOMB_AOE, CastSpellExtraArgs(SPELLVALUE_MAX_TARGETS, RAID_MODE(2, 5, 2, 6)));
+                    me->CastSpell(me, SPELL_ICY_TOMB_AOE, CastSpellExtraArgs(TRIGGERED_FULL_MASK).AddSpellMod(SPELLVALUE_MAX_TARGETS, RAID_MODE(2, 5, 2, 6)));
                     events.ScheduleEvent(EVENT_ICY_TOMB, 20s);
                     break;
                 case EVENT_ICE_LANCE:
