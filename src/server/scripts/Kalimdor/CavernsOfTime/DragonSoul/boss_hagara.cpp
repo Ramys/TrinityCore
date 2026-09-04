@@ -964,6 +964,13 @@ public:
             }
         }
 
+        uint32 GetData(uint32 type) const override
+        {
+            if (type == DATA_CRYSTAL_OVERLOADED)
+                return _overloaded ? 1 : 0;
+            return 0;
+        }
+
         void UpdateAI(uint32 diff) override
         {
             _events.Update(diff);
