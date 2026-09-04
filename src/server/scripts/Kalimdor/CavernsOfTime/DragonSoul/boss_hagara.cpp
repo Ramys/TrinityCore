@@ -306,7 +306,7 @@ enum Phases
 class boss_hagara_the_stormbinder : public BossAI
 {
 public:
-    boss_hagara_the_stormbinder(Creature* creature) : BossAI(creature, DATA_HAGARA)
+    boss_hagara_the_stormbinder(Creature* creature) : BossAI(creature, DATA_HAGARA_THE_STORMBINDER)
     {
         Initialize();
     }
@@ -339,7 +339,7 @@ public:
         me->SetInCombatWithZone();
         if (instance)
         {
-            instance->SetBossState(DATA_HAGARA, IN_PROGRESS);
+            instance->SetBossState(DATA_HAGARA_THE_STORMBINDER, IN_PROGRESS);
             instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
         }
         Talk(SAY_AGGRO);
@@ -349,5 +349,86 @@ public:
         events.ScheduleEvent(EVENT_FOCUSED_ASSAULT, 20s);
         events.ScheduleEvent(EVENT_ICY_TOMB, 30s);
         events.ScheduleEvent(EVENT_ICE_LANCE, 40s);
+    }
+
+
+    void KilledUnit(Unit* victim) override
+    {
+        if (victim && victim->GetTypeId() == TYPEID_PLAYER)
+            Talk(SAY_KILL);
+    }
+
+    void JustDied(Unit*) override
+    {
+        _JustDied();
+        Talk(SAY_DEATH);
+        if (instance)
+            instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
+    }
+
+    void EnterEvadeMode(EvadeReason why) override
+    {
+        BossAI::EnterEvadeMode(why);
+        events.Reset();
+        summons.DespawnAll();
+        me->RemoveAurasDueToSpell(SPELL_FROZEN_TEMPEST);
+        me->RemoveAurasDueToSpell(SPELL_ICE_LANCE_AOE);
+        me->RemoveAurasDueToSpell(SPELL_LIGHTNING_STORM);
+        if (instance)
+        {
+            instance->SetBossState(DATA_HAGARA_THE_STORMBINDER, FAIL);
+            instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
+        }
+        _phase = PHASE_INTRO;
+    }
+
+    void JustSummoned(Creature* summon) override
+    {
+        BossAI::JustSummoned(summon);
+        switch (summon->GetEntry())
+        {
+            case NPC_BINDING_CRYSTAL:
+            case NPC_CRYSTAL_CONDUCTOR:
+                summon->SetReactState(REACT_PASSIVE);
+                break;
+            default:
+                break;
+        }
+    }
+
+    void SetData(uint32 type, uint32 data) override
+    {
+        switch (type)
+        {
+            case DATA_PHASE:
+                _phase = data;
+                break;
+            case DATA_MAIN_WAVE:
+                _mainWave = data != 0;
+                break;
+            case DATA_CRYSTAL_OVERLOADED:
+                if (data)
+                    events.ScheduleEvent(EVENT_END_SPECIAL_PHASE, 2500ms);
+                break;
+            default:
+                break;
+        }
+    }
+
+    uint32 GetData(uint32 type) const override
+    {
+        if (type == DATA_CIRCLE_POINT)
+            return circlePosition;
+        if (type == DATA_PHASE)
+            return _phase;
+        return 0;
+    }
+
+    void DoAction(int32 action) override
+    {
+        if (action == ACTION_ICE_WAVE_MOVE)
+            events.ScheduleEvent(EVENT_ICE_WAVE_MOVE, 50ms);
+        else if (action == ACTION_CRYSTAL_DIED)
+            _dummyfrif = true;
     }
 
