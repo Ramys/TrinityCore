@@ -316,6 +316,8 @@ public:
     {
         circlePosition = 0;
         _phase = PHASE_INTRO;
+        _specialPhase = false;
+        _crystalCount = 0;
         _icyTombLock = false;
         _tombCount = 0;
         _dummyfrif = false;
@@ -346,10 +348,20 @@ public:
         Talk(SAY_AGGRO);
         DoCastSelf(SPELL_BERSERK, true);
         events.ScheduleEvent(EVENT_BERSERK, 8 * MINUTE * IN_MILLISECONDS);
-        events.ScheduleEvent(EVENT_SHATTERED_ICE, 16s);
-        events.ScheduleEvent(EVENT_FOCUSED_ASSAULT, 20s);
-        events.ScheduleEvent(EVENT_ICY_TOMB, 30s);
-        events.ScheduleEvent(EVENT_ICE_LANCE, 40s);
+        if (urand(0, 1))
+        {
+            events.ScheduleEvent(EVENT_FROZEN_TEMPEST_1, 32s);
+            DoCastSelf(SPELL_HAGARA_FROST_AXES, true);
+        }
+        else
+        {
+            events.ScheduleEvent(EVENT_ELECTRICAL_STORM_1, 32s);
+            DoCastSelf(SPELL_HAGARA_LIGHTNING_AXES, true);
+        }
+        events.ScheduleEvent(EVENT_SHATTERED_ICE, urand(10500, 15000));
+        events.ScheduleEvent(EVENT_FOCUSED_ASSAULT, 11s);
+        events.ScheduleEvent(EVENT_ICY_TOMB, 20s);
+        events.ScheduleEvent(EVENT_ICE_LANCE, 10s);
     }
 
 
