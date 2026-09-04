@@ -1150,3 +1150,147 @@ public:
     }
 };
 
+
+struct spell_hagara_the_stormbinder_icy_tomb_aoe : public SpellScript
+{
+    void FilterTargets(std::list<WorldObject*>& targets)
+    {
+        if (!GetCaster() || !GetCaster()->GetVictim())
+            return;
+
+        if (targets.size() > 1)
+            targets.remove(GetCaster()->GetVictim());
+    }
+
+    void HandleScript(SpellEffIndex /*effIndex*/)
+    {
+        if (!GetCaster() || !GetHitUnit())
+            return;
+
+        GetCaster()->CastSpell(GetHitUnit(), SPELL_ICY_TOMB_DUMMY, true);
+    }
+
+    void Register() override
+    {
+        OnObjectAreaTargetSelect.Register(&spell_hagara_the_stormbinder_icy_tomb_aoe::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+        OnEffectHitTarget.Register(&spell_hagara_the_stormbinder_icy_tomb_aoe::HandleScript, EFFECT_0, SPELL_EFFECT_DUMMY);
+    }
+};
+
+struct spell_hagara_the_stormbinder_icy_tomb_dummy : public SpellScript
+{
+    void HandleScript(SpellEffIndex /*effIndex*/)
+    {
+        if (!GetCaster() || !GetHitUnit())
+            return;
+
+        GetCaster()->CastSpell(GetHitUnit(), SPELL_ICY_TOMB, true);
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget.Register(&spell_hagara_the_stormbinder_icy_tomb_dummy::HandleScript, EFFECT_0, SPELL_EFFECT_DUMMY);
+    }
+};
+
+struct spell_hagara_the_stormbinder_icy_tomb : public AuraScript
+{
+    void OnApply(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+    {
+        if (!GetCaster() || !GetUnitOwner())
+            return;
+
+        Position pos = GetUnitOwner()->GetPosition();
+        if (TempSummon* summon = GetCaster()->SummonCreature(NPC_ICY_TOMB, pos))
+            summon->AI()->SetGUID(GetUnitOwner()->GetGUID(), DATA_TRAPPED_PLAYER);
+    }
+
+    void Register() override
+    {
+        OnEffectApply.Register(&spell_hagara_the_stormbinder_icy_tomb::OnApply, EFFECT_0, SPELL_AURA_MOD_STUN, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+
+struct spell_hagara_the_stormbinder_lightning_conduit : public AuraScript
+{
+    class AnyPlayerOrCrystalCheck
+    {
+    public:
+        AnyPlayerOrCrystalCheck(WorldObject const* obj, float range) : _obj(obj), _range(range) { }
+        bool operator()(Player* u)
+        {
+            if (u->GetGUID() == _obj->GetGUID())
+                return false;
+            if (u->HasAura(SPELL_LIGHTNING_CONDUIT_DUMMY_1))
+                return false;
+            if (!u->IsAlive())
+                return false;
+            if (!_obj->IsWithinDistInMap(u, _range))
+                return false;
+            return true;
+        }
+    private:
+        WorldObject const* _obj;
+        float _range;
+    };
+
+    void HandlePeriodicTick(AuraEffect const* /*aurEff*/)
+    {
+        if (!GetCaster() || !GetTarget())
+            return;
+
+        Creature* hagara = GetCaster()->FindNearestCreature(NPC_HAGARA_THE_STORMBINDER, 200.0f, true);
+        if (!hagara || hagara->AI()->GetData(DATA_PHASE) != PHASE_LIGHTNING)
+            return;
+
+        GetCaster()->CastSpell(GetTarget(), SPELL_LIGHTNING_CONDUIT_DMG, true);
+
+        std::list<Player*> players;
+        AnyPlayerOrCrystalCheck check(GetTarget(), 10.0f);
+        Trinity::PlayerListSearcher<AnyPlayerOrCrystalCheck> searcher(GetTarget(), players, check);
+        GetTarget()->VisitNearbyObject(10.0f, searcher);
+
+        if (Creature* pCrystal = GetTarget()->FindNearestCreature(NPC_CRYSTAL_CONDUCTOR, 10.0f))
+            if (!pCrystal->AI()->GetData(DATA_CRYSTAL_OVERLOADED))
+                GetTarget()->CastSpell(pCrystal, SPELL_LIGHTNING_CONDUIT_DUMMY_1, true);
+
+        if (!GetCaster() || !GetTarget())
+            return;
+
+        if (!players.empty())
+        {
+            for (std::list<Player*>::const_iterator itr = players.begin(); itr != players.end(); ++itr)
+            {
+                GetTarget()->CastSpell((*itr), SPELL_LIGHTNING_CONDUIT_DUMMY_1, true);
+                (*itr)->CastSpell(GetTarget(), SPELL_LIGHTNING_CONDUIT_DUMMY_2, true);
+            }
+        }
+    }
+
+    void Register() override
+    {
+        OnEffectPeriodic.Register(&spell_hagara_the_stormbinder_lightning_conduit::HandlePeriodicTick, EFFECT_1, SPELL_AURA_PERIODIC_DUMMY);
+    }
+};
+
+} // namespace DragonSoul::Hagara
+
+using namespace DragonSoul::Hagara;
+
+void AddSC_boss_hagara()
+{
+    using namespace DragonSoul;
+    RegisterDragonSoulCreatureAI(boss_hagara_the_stormbinder);
+    RegisterCreatureAI(npc_hagara_the_stormbinder_ice_wave);
+    RegisterCreatureAI(npc_hagara_the_stormbinder_frozen_binding_crystal);
+    RegisterCreatureAI(npc_hagara_the_stormbinder_crystal_conductor);
+    RegisterCreatureAI(npc_hagara_the_stormbinder_icy_tomb);
+    RegisterCreatureAI(npc_hagara_the_stormbinder_ice_lance);
+    RegisterCreatureAI(npc_hagara_the_stormbinder_collapsing_icicle);
+    RegisterSpellScript(spell_hagara_the_stormbinder_icy_tomb_aoe);
+    RegisterSpellScript(spell_hagara_the_stormbinder_icy_tomb_dummy);
+    RegisterAuraScript(spell_hagara_the_stormbinder_icy_tomb);
+    RegisterAuraScript(spell_hagara_the_stormbinder_lightning_conduit);
+}
+
