@@ -106,10 +106,8 @@ public:
                     // Blizzlike 4.3.4: Zon'ozz so libera apos Morchok DONE
                     return GetBossState(DATA_MORCHOK) == DONE;
                 case DATA_YORSAHJ_THE_UNSLEEPING:
-                    // Blizzlike sequencial: Yor'sahj apos Zon'ozz DONE (2o -> 3o boss DS)
-                    if (GetBossState(DATA_WARLORD_ZONOZZ) == DONE)
-                        return true;
-                    return GetBossState(DATA_MORCHOK) == DONE;
+                    // Blizzlike sequencial: Yor'sahj so apos Zon'ozz DONE (2o -> 3o boss DS) - fix portal liberar antes do kill
+                    return GetBossState(DATA_WARLORD_ZONOZZ) == DONE;
                 case DATA_HAGARA_THE_STORMBINDER:
                     // Blizzlike sequencial: Hagara (4o boss) so apos Yor'sahj DONE
                     // C++ boss_hagara JustEngagedWith -> EnterEvadeMode(EVADE_REASON_SEQUENCE_BREAK) se Yor'sahj != DONE

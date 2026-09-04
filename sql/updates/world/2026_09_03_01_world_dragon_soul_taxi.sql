@@ -54,21 +54,33 @@ DELETE FROM `npc_text` WHERE `ID` = 100000;
 INSERT INTO `npc_text` (`ID`, `text0_0`, `text0_1`, `BroadcastTextID0`, `lang0`, `Probability0`, `EmoteDelay0_0`, `Emote0_0`, `EmoteDelay0_1`, `Emote0_1`, `EmoteDelay0_2`, `Emote0_2`) VALUES
 (100000, 'The darkhound awaits. Shall I fly you to the battle below?', '', 0, 0, 100, 0, 0, 0, 0, 0, 0);
 
--- 3) gossip_menu ligando MenuID 13411 ao texto
+-- 3) gossip_menu ligando MenuID 13411 ao texto (ida torre -> arena)
 DELETE FROM `gossip_menu` WHERE `MenuID` = 13411;
 INSERT INTO `gossip_menu` (`MenuID`, `TextID`, `VerifiedBuild`) VALUES
 (13411, 100000, 0);
+
+-- 3b) gossip_menu retorno arena -> torre (13412) - so liberado apos Zon'ozz DONE + Yor'sahj DONE (dragon_soul.cpp CanReturn)
+DELETE FROM `gossip_menu` WHERE `MenuID` = 13412;
+INSERT INTO `gossip_menu` (`MenuID`, `TextID`, `VerifiedBuild`) VALUES
+(13412, 100000, 0);
 
 -- 4) Opcao -> dispara GossipSelect no script (OptionType=1 GOSSIP_OPTION_GOSSIP, OptionNpcflag=1 GOSSIP)
 DELETE FROM `gossip_menu_option` WHERE `MenuID` = 13411;
 INSERT INTO `gossip_menu_option` (`MenuID`, `OptionID`, `OptionIcon`, `OptionText`, `OptionBroadcastTextID`, `OptionType`, `OptionNpcFlag`, `VerifiedBuild`) VALUES
 (13411, 0, 1, 'Fly me to the arena.', 0, 1, 1, 0);
 
+DELETE FROM `gossip_menu_option` WHERE `MenuID` = 13412;
+INSERT INTO `gossip_menu_option` (`MenuID`, `OptionID`, `OptionIcon`, `OptionText`, `OptionBroadcastTextID`, `OptionType`, `OptionNpcFlag`, `VerifiedBuild`) VALUES
+(13412, 0, 1, 'Return me to Wyrmrest Temple.', 0, 1, 1, 0);
+
 -- 5) Spawn dos drakes na sala apos Morchok (map 967, zone 5892 Dragon Soul, area 5923 The Dragon Wastes) - Grade [28,27] Cell [5,3]/[5,4] Instance 1
 -- Coord .gps solicitado: Valeera 57289 (-1789.48291, -2362.63818, 47.289059, 4.638559 FloorZ 47.288376) / Eiendormi 57288 (-1783.362793, -2419.810059, 45.673759, 1.734852 FloorZ 45.672554)
--- Todas dificuldades 10N/25N/10H/25H = spawnMask 15, phaseMask 1, VerifiedBuild 0 (compativel TDB root 2022 e DB migrado via header AUTO-FIX 1054)
-DELETE FROM `creature` WHERE `guid` IN (1770001, 1770002);
-DELETE FROM `creature` WHERE `id` IN (57288, 57289) AND `map`=967 AND `guid` NOT IN (1770001, 1770002);
+-- GroundZ 31.981552/35.631393 VMap1 MMap1. Todas dificuldades 10N/25N/10H/25H = spawnMask 15, phaseMask 1, VerifiedBuild 0 (compativel TDB root 2022 e DB migrado via header AUTO-FIX 1054)
+DELETE FROM `creature` WHERE `guid` IN (1770001, 1770002, 1770003, 1770004);
+DELETE FROM `creature` WHERE `id` IN (57288, 57289) AND `map`=967 AND `guid` NOT IN (1770001, 1770002, 1770003, 1770004);
 INSERT INTO `creature` (`guid`, `id`, `map`, `zoneId`, `areaId`, `spawnMask`, `phaseUseFlags`, `phaseMask`, `PhaseId`, `PhaseGroup`, `terrainSwapMap`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `wander_distance`, `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `ScriptName`, `VerifiedBuild`) VALUES
 (1770001, 57289, 967, 5892, 5923, 15, 0, 1, 0, 0, -1, 0, 0, -1789.48291, -2362.63818, 47.289059, 4.638559, 7200, 0, 0, 1, 0, 0, 1, 0, '', 0),
-(1770002, 57288, 967, 5892, 5923, 15, 0, 1, 0, 0, -1, 0, 0, -1783.362793, -2419.810059, 45.673759, 1.734852, 7200, 0, 0, 1, 0, 0, 1, 0, '', 0);
+(1770002, 57288, 967, 5892, 5923, 15, 0, 1, 0, 0, -1, 0, 0, -1783.362793, -2419.810059, 45.673759, 1.734852, 7200, 0, 0, 1, 0, 0, 1, 0, '', 0),
+-- 5b) Drakes reversos nas arenas para retorno (IsAtTower Z>0 ? ida : volta) - liberados so apos Zon'ozz+DONE && Yor'sahj DONE
+(1770003, 57289, 967, 5892, 5923, 15, 0, 1, 0, 0, -1, 0, 0, -1748.120000, -1829.450000, -220.100000, 2.000000, 7200, 0, 0, 1, 0, 0, 1, 0, '', 0),
+(1770004, 57288, 967, 5892, 5923, 15, 0, 1, 0, 0, -1, 0, 0, -1860.450000, -3075.220000, -178.210000, 3.500000, 7200, 0, 0, 1, 0, 0, 1, 0, '', 0);

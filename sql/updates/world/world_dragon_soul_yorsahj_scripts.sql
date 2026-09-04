@@ -67,11 +67,13 @@ INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES
 -- C++ boss_yorsahj_the_unsleeping.cpp:JustEngagedWith checks GetBossState(DATA_WARLORD_ZONOZZ)!=DONE -> Evade
 -- Se SELECT retornar 0 linhas, spawn faltando -> inserir
 -- SELECT `guid`, `id`, `map`, `position_x`, `position_y`, `position_z`, `orientation`, `spawnMask` FROM `creature` WHERE `id`=55312 AND `map`=967;
--- Spawn retail sniff aproximado: sala após Zon'ozz (caminho para Hagara), Z valido via UpdateGroundPositionZ
+-- Spawn retail .gps: sala Yor'sahj [28,28] Cell [5,5] Instance 1 - proximo taxiPos [-1854.2331,-3068.6586,-178.339,0.46] offset centro arena
 -- TDB_full_world_434.22011_2022_01_09.sql (raiz) usa `wander_distance`+`dynamicflags`+phase cols -> schema 2022
+DELETE FROM `creature` WHERE `guid`=900002;
+DELETE FROM `creature` WHERE `id`=55312 AND `map`=967 AND `guid`!=900002;
 INSERT INTO `creature` (`guid`,`id`,`map`,`zoneId`,`areaId`,`spawnMask`,`phaseUseFlags`,`phaseMask`,`PhaseId`,`PhaseGroup`,`terrainSwapMap`,`modelid`,`equipment_id`,`position_x`,`position_y`,`position_z`,`orientation`,`spawntimesecs`,`wander_distance`,`currentwaypoint`,`curhealth`,`curmana`,`MovementType`,`npcflag`,`unit_flags`,`ScriptName`,`VerifiedBuild`)
-SELECT 900002, 55312, 967, 0, 0, 15, 0, 1, 0, 0, -1, 0, 0, -13530.5, -12105.8, 268.2, 1.57, 120, 0, 0, 49237900, 0, 0, 0, 0, '', 0
-FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM `creature` WHERE `id`=55312 AND `map`=967);
+SELECT 900002, 55312, 967, 5892, 5923, 15, 0, 1, 0, 0, -1, 0, 0, -1849.112000, -3092.445000, -178.339000, 0.460000, 120, 0, 0, 49237900, 0, 0, 0, 0, '', 0
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM `creature` WHERE `guid`=900002);
 
 -- 4) Garante spawnMask 15 = todas dificuldades (10N/25N/10H/25H) em 967
 UPDATE `creature` SET `spawnMask`=15 WHERE `id`=55312 AND `map`=967;

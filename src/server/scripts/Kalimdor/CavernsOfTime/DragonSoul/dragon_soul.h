@@ -160,13 +160,15 @@ AI* GetDragonSoulAI(Creature* creature)
 enum DragonSoulPortals
 {
     PORTAL_VALEERA    = 0, // Valeera (57289) -> Zon'ozz
-    PORTAL_EIENDORMI  = 1  // Eiendormi (57288) -> Yor'sahj
+    PORTAL_EIENDORMI  = 1, // Eiendormi (57288) -> Yor'sahj
+    PORTAL_TOWER      = 2  // retorno Wyrmrest/torre central (drakes reversos)
 };
 
 // Coords taxi drakes (map 967) - port do 5.4.8 (dragon_soul.cpp)
 // Nome taxado taxi* para nao colidir com 'portalsPos' ja definido em boss_warlord_zonozz.cpp (mesmo namespace DragonSoul).
-// [0] Zon'ozz, [1] Yor'sahj
+// [0] Zon'ozz, [1] Yor'sahj, [2] Tower (retorno)
 extern Position const taxiPortalsPos[];
+extern Position const taxiTowerPos;
 
 uint32 GetPortalForEntry(uint32 entry);
 }

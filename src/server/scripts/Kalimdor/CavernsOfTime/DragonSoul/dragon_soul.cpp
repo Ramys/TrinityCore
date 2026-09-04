@@ -30,6 +30,7 @@ Position const taxiPortalsPos[] =
     { -1743.6478f, -1835.1325f, -220.509f, 4.53f },
     { -1854.2331f, -3068.6586f, -178.339f, 0.46f }
 };
+Position const taxiTowerPos = { -1789.48291f, -2362.63818f, 47.289059f, 4.638559f };
 
 uint32 GetPortalForEntry(uint32 entry)
 {
@@ -44,7 +45,8 @@ uint32 GetPortalForEntry(uint32 entry)
 
 enum
 {
-    GOSSIP_MENU_DRAGON_SOUL_TAXI = 13411 // menu de texto definido no DB (gossip_menu). Port do 5.4.8.
+    GOSSIP_MENU_DRAGON_SOUL_TAXI = 13411, // menu ida torre -> boss (forward)
+    GOSSIP_MENU_DRAGON_SOUL_RETURN = 13412 // menu volta arena -> torre (retorno apos Zon'ozz+Yor'sahj DONE)
 };
 
 class npc_dragon_soul_teleport : public CreatureScript
@@ -59,50 +61,81 @@ public:
             _instance = me->GetInstanceScript();
         }
 
-        bool GossipHello(Player* player) override
+        bool IsAtTower() const
         {
-            // Drakes so oferecem o taxi quando o boss de destino esta liberado (gate via CheckRequiredBosses)
-            if (!_instance || !CanFly(player))
-                return false;
-
-            player->PrepareGossipMenu(me, GOSSIP_MENU_DRAGON_SOUL_TAXI, true);
-            player->SendPreparedGossip(me);
-            return true;
+            // Torre central Wyrmrest: Z ~47, arenas Z ~-220/-178 -> distancia Z >150 separa
+            return me->GetPositionZ() > 0.0f;
         }
 
-        bool GossipSelect(Player* player, uint32 menuId, uint32 /*gossipListId*/) override
+        bool CanFlyForward(Player* player) const
         {
-            // So consome a opcao do nosso menu; demais passam pro handler nativo
-            if (menuId != GOSSIP_MENU_DRAGON_SOUL_TAXI)
-                return false;
-
-            player->PlayerTalkClass->SendCloseGossip();
-
-            // Port do 5.4.8: teleport direto (NearTeleportTo) via gossip, sem waypoints nem summon
-            if (CanFly(player))
-            {
-                uint32 portal = GetPortalForEntry(me->GetEntry());
-                player->NearTeleportTo(taxiPortalsPos[portal]);
-            }
-            // Se o gate fechou entre Hello e Select, apenas fecha o menu (retorna true p/ nao reabrir nativamente)
-            return true;
-        }
-
-    private:
-        bool CanFly(Player* player) const
-        {
+            if (!_instance) return false;
             switch (me->GetEntry())
             {
                 case NPC_VALEERA:
                     return _instance->CheckRequiredBosses(DATA_WARLORD_ZONOZZ, player);
                 case NPC_EIENDORMI:
                     return _instance->CheckRequiredBosses(DATA_YORSAHJ_THE_UNSLEEPING, player);
-                default:
-                    break;
+                default: break;
             }
             return false;
         }
 
+        bool CanReturn() const
+        {
+            if (!_instance) return false;
+            // Retorno so apos ambos Zon'ozz e Yor'sahj DONE (pedido: matar ambos libera portal volta torre)
+            return _instance->GetBossState(DATA_WARLORD_ZONOZZ) == DONE
+                && _instance->GetBossState(DATA_YORSAHJ_THE_UNSLEEPING) == DONE;
+        }
+
+        bool GossipHello(Player* player) override
+        {
+            if (!_instance)
+                return false;
+
+            if (IsAtTower())
+            {
+                if (!CanFlyForward(player))
+                    return false;
+                player->PrepareGossipMenu(me, GOSSIP_MENU_DRAGON_SOUL_TAXI, true);
+                player->SendPreparedGossip(me);
+                return true;
+            }
+            else
+            {
+                // Drake reverso na arena -> menu retorno
+                if (!CanReturn())
+                    return false;
+                player->PrepareGossipMenu(me, GOSSIP_MENU_DRAGON_SOUL_RETURN, true);
+                player->SendPreparedGossip(me);
+                return true;
+            }
+        }
+
+        bool GossipSelect(Player* player, uint32 menuId, uint32 /*gossipListId*/) override
+        {
+            if (menuId == GOSSIP_MENU_DRAGON_SOUL_TAXI && IsAtTower())
+            {
+                player->PlayerTalkClass->SendCloseGossip();
+                if (CanFlyForward(player))
+                {
+                    uint32 portal = GetPortalForEntry(me->GetEntry());
+                    player->NearTeleportTo(taxiPortalsPos[portal]);
+                }
+                return true;
+            }
+            if (menuId == GOSSIP_MENU_DRAGON_SOUL_RETURN && !IsAtTower())
+            {
+                player->PlayerTalkClass->SendCloseGossip();
+                if (CanReturn())
+                    player->NearTeleportTo(taxiTowerPos);
+                return true;
+            }
+            return false;
+        }
+
+    private:
         InstanceScript* _instance;
     };
 
