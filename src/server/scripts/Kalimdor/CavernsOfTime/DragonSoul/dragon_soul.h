@@ -19,6 +19,7 @@
 #define DEF_DRAGONSOUL_H
 
 #include "Define.h"
+#include "Position.h"
 #include "Creature.h"
 #include "CreatureAIImpl.h"
 
@@ -165,22 +166,9 @@ enum DragonSoulPortals
 // Coords taxi drakes (map 967) - port do 5.4.8 (dragon_soul.cpp)
 // Nome taxado taxi* para nao colidir com 'portalsPos' ja definido em boss_warlord_zonozz.cpp (mesmo namespace DragonSoul).
 // [0] Zon'ozz, [1] Yor'sahj
-Position const taxiPortalsPos[] =
-{
-    { -1743.6478f, -1835.1325f, -220.509f, 4.53f },
-    { -1854.2331f, -3068.6586f, -178.339f, 0.46f }
-};
+extern Position const taxiPortalsPos[];
 
-uint32 const GetPortalForEntry(uint32 entry)
-{
-    switch (entry)
-    {
-        case NPC_VALEERA:   return PORTAL_VALEERA;   // -> Zon'ozz
-        case NPC_EIENDORMI: return PORTAL_EIENDORMI; // -> Yor'sahj
-        default:            break;
-    }
-    return 0;
-}
+uint32 GetPortalForEntry(uint32 entry);
 }
 
 #endif // DEF_DRAGONSOUL_H

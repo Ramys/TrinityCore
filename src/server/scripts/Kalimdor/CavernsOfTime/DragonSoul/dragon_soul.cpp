@@ -25,6 +25,23 @@
 
 namespace DragonSoul
 {
+Position const taxiPortalsPos[] =
+{
+    { -1743.6478f, -1835.1325f, -220.509f, 4.53f },
+    { -1854.2331f, -3068.6586f, -178.339f, 0.46f }
+};
+
+uint32 GetPortalForEntry(uint32 entry)
+{
+    switch (entry)
+    {
+        case NPC_VALEERA:   return PORTAL_VALEERA;
+        case NPC_EIENDORMI: return PORTAL_EIENDORMI;
+        default:            break;
+    }
+    return 0;
+}
+
 enum
 {
     GOSSIP_MENU_DRAGON_SOUL_TAXI = 13411 // menu de texto definido no DB (gossip_menu). Port do 5.4.8.
