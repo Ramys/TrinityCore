@@ -270,17 +270,21 @@ struct boss_morchok : public BossAI
 
     void DamageTaken(Unit* attacker, uint32& damage) override
     {
-        // FIX: Força a morte no modo Normal
-        if (!_isHeroic && me->GetHealth() <= damage)
-        {
-            me->SetHealth(0);
-            me->setDeathState(JUST_DIED);
-            JustDied(nullptr);
-            return;
-        }
-
         if (!me->IsAlive())
             return;
+
+        // Normal: 1 HP bug fix - mata com killer correto (loot), evita SetHealth(0)+JustDied(nullptr) que quebra lootRecipient
+        if (!_isHeroic && me->GetHealth() <= damage)
+        {
+            if (attacker)
+                Unit::Kill(attacker, me, false);
+            else if (Unit* v = me->GetVictim())
+                Unit::Kill(v, me, false);
+            else
+                Unit::Kill(me, me, false);
+            damage = 0;
+            return;
+        }
 
         if (_isHeroic && !_kohcromSummoned && me->HealthBelowPctDamaged(90, damage))
         {
@@ -506,17 +510,22 @@ struct npc_morchok_kohcrom : public BossAI
 
     void DamageTaken(Unit* attacker, uint32& damage) override
     {
-        // FIX: Força a morte no modo Normal
-        if (!_isHeroic && me->GetHealth() <= damage)
-        {
-            me->SetHealth(0);
-            me->setDeathState(JUST_DIED);
-            JustDied(nullptr);
-            return;
-        }
-
         if (!me->IsAlive())
             return;
+
+        if (!_isHeroic && me->GetHealth() <= damage)
+        {
+            if (attacker)
+                Unit::Kill(attacker, me, false);
+            else if (Unit* v = me->GetVictim())
+                Unit::Kill(v, me, false);
+            else if (_twin)
+                Unit::Kill(_twin, me, false);
+            else
+                Unit::Kill(me, me, false);
+            damage = 0;
+            return;
+        }
 
         if (!_twin && instance)
             _twin = instance->GetCreature(DATA_MORCHOK);
