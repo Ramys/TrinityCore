@@ -777,14 +777,9 @@ private:
 };
 
 
-class npc_hagara_the_stormbinder_ice_wave : public CreatureScript
+struct npc_hagara_the_stormbinder_ice_wave : public ScriptedAI
 {
-public:
-    npc_hagara_the_stormbinder_ice_wave() : CreatureScript("npc_hagara_the_stormbinder_ice_wave") { }
-
-    struct npc_hagara_the_stormbinder_ice_waveAI : public ScriptedAI
-    {
-        npc_hagara_the_stormbinder_ice_waveAI(Creature* creature) : ScriptedAI(creature)
+        npc_hagara_the_stormbinder_ice_wave(Creature* creature) : ScriptedAI(creature)
         {
             me->SetReactState(REACT_PASSIVE);
             circlePoint = 0;
@@ -861,23 +856,13 @@ public:
                 circlePoint = 0;
             return circlePoint;
         }
-    };
-
-    CreatureAI* GetAI(Creature* creature) const override
-    {
-        return GetDragonSoulAI<npc_hagara_the_stormbinder_ice_waveAI>(creature);
-    }
+    
 };
 
 
-class npc_hagara_the_stormbinder_frozen_binding_crystal : public CreatureScript
+struct npc_hagara_the_stormbinder_frozen_binding_crystal : public ScriptedAI
 {
-public:
-    npc_hagara_the_stormbinder_frozen_binding_crystal() : CreatureScript("npc_hagara_the_stormbinder_frozen_binding_crystal") { }
-
-    struct npc_hagara_the_stormbinder_frozen_binding_crystalAI : public ScriptedAI
-    {
-        npc_hagara_the_stormbinder_frozen_binding_crystalAI(Creature* creature) : ScriptedAI(creature)
+        npc_hagara_the_stormbinder_frozen_binding_crystal(Creature* creature) : ScriptedAI(creature)
         {
             me->ApplySpellImmune(0, IMMUNITY_EFFECT, SPELL_EFFECT_KNOCK_BACK, true);
             me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_GRIP, true);
@@ -912,22 +897,12 @@ public:
 
     private:
         InstanceScript* _instance;
-    };
-
-    CreatureAI* GetAI(Creature* creature) const override
-    {
-        return GetDragonSoulAI<npc_hagara_the_stormbinder_frozen_binding_crystalAI>(creature);
-    }
+    
 };
 
-class npc_hagara_the_stormbinder_crystal_conductor : public CreatureScript
+struct npc_hagara_the_stormbinder_crystal_conductor : public ScriptedAI
 {
-public:
-    npc_hagara_the_stormbinder_crystal_conductor() : CreatureScript("npc_hagara_the_stormbinder_crystal_conductor") { }
-
-    struct npc_hagara_the_stormbinder_crystal_conductorAI : public ScriptedAI
-    {
-        npc_hagara_the_stormbinder_crystal_conductorAI(Creature* creature) : ScriptedAI(creature)
+        npc_hagara_the_stormbinder_crystal_conductor(Creature* creature) : ScriptedAI(creature)
         {
             me->ApplySpellImmune(0, IMMUNITY_EFFECT, SPELL_EFFECT_KNOCK_BACK, true);
             me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_GRIP, true);
@@ -947,7 +922,7 @@ public:
             SetCombatMovement(false);
         }
 
-        void SpellHit(WorldObject* caster, SpellInfo const* spell) override
+        void SpellHit(WorldObject* /*caster*/, SpellInfo const* spell) override
         {
             if ((spell->Id == SPELL_OVERLOAD_2 || spell->Id == SPELL_LIGHTNING_CONDUIT_DUMMY_1) && !_overloaded)
             {
@@ -990,23 +965,13 @@ public:
         InstanceScript* _instance;
         bool _overloaded;
         EventMap _events;
-    };
-
-    CreatureAI* GetAI(Creature* creature) const override
-    {
-        return GetDragonSoulAI<npc_hagara_the_stormbinder_crystal_conductorAI>(creature);
-    }
+    
 };
 
 
-class npc_hagara_the_stormbinder_bound_lightning_elemental : public CreatureScript
+struct npc_hagara_the_stormbinder_bound_lightning_elemental : public ScriptedAI
 {
-public:
-    npc_hagara_the_stormbinder_bound_lightning_elemental() : CreatureScript("npc_hagara_the_stormbinder_bound_lightning_elemental") { }
-
-    struct npc_hagara_the_stormbinder_bound_lightning_elementalAI : public ScriptedAI
-    {
-        npc_hagara_the_stormbinder_bound_lightning_elementalAI(Creature* creature) : ScriptedAI(creature)
+        npc_hagara_the_stormbinder_bound_lightning_elemental(Creature* creature) : ScriptedAI(creature)
         {
             me->ApplySpellImmune(0, IMMUNITY_EFFECT, SPELL_EFFECT_KNOCK_BACK, true);
             me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_GRIP, true);
@@ -1061,23 +1026,13 @@ public:
         };
 
         EventMap _events;
-    };
-
-    CreatureAI* GetAI(Creature* creature) const override
-    {
-        return GetDragonSoulAI<npc_hagara_the_stormbinder_bound_lightning_elementalAI>(creature);
-    }
+    
 };
 
 
-class npc_hagara_the_stormbinder_icy_tomb : public CreatureScript
+struct npc_hagara_the_stormbinder_icy_tomb : public ScriptedAI
 {
-public:
-    npc_hagara_the_stormbinder_icy_tomb() : CreatureScript("npc_hagara_the_stormbinder_icy_tomb") { }
-
-    struct npc_hagara_the_stormbinder_icy_tombAI : public ScriptedAI
-    {
-        npc_hagara_the_stormbinder_icy_tombAI(Creature* creature) : ScriptedAI(creature)
+        npc_hagara_the_stormbinder_icy_tomb(Creature* creature) : ScriptedAI(creature)
         {
             me->ApplySpellImmune(0, IMMUNITY_EFFECT, SPELL_EFFECT_KNOCK_BACK, true);
             me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_GRIP, true);
@@ -1143,22 +1098,12 @@ public:
     private:
         ObjectGuid trappedPlayer;
         uint32 existenceCheckTimer;
-    };
-
-    CreatureAI* GetAI(Creature* creature) const override
-    {
-        return GetDragonSoulAI<npc_hagara_the_stormbinder_icy_tombAI>(creature);
-    }
+    
 };
 
-class npc_hagara_the_stormbinder_ice_lance : public CreatureScript
+struct npc_hagara_the_stormbinder_ice_lance : public ScriptedAI
 {
-public:
-    npc_hagara_the_stormbinder_ice_lance() : CreatureScript("npc_hagara_the_stormbinder_ice_lance") { }
-
-    struct npc_hagara_the_stormbinder_ice_lanceAI : public ScriptedAI
-    {
-        npc_hagara_the_stormbinder_ice_lanceAI(Creature* creature) : ScriptedAI(creature)
+        npc_hagara_the_stormbinder_ice_lance(Creature* creature) : ScriptedAI(creature)
         {
             me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
             targetPlayer = ObjectGuid::Empty;
@@ -1191,22 +1136,12 @@ public:
 
     private:
         ObjectGuid targetPlayer;
-    };
-
-    CreatureAI* GetAI(Creature* creature) const override
-    {
-        return GetDragonSoulAI<npc_hagara_the_stormbinder_ice_lanceAI>(creature);
-    }
+    
 };
 
-class npc_hagara_the_stormbinder_collapsing_icicle : public CreatureScript
+struct npc_hagara_the_stormbinder_collapsing_icicle : public ScriptedAI
 {
-public:
-    npc_hagara_the_stormbinder_collapsing_icicle() : CreatureScript("npc_hagara_the_stormbinder_collapsing_icicle") { }
-
-    struct npc_hagara_the_stormbinder_collapsing_icicleAI : public ScriptedAI
-    {
-        npc_hagara_the_stormbinder_collapsing_icicleAI(Creature* creature) : ScriptedAI(creature)
+        npc_hagara_the_stormbinder_collapsing_icicle(Creature* creature) : ScriptedAI(creature)
         {
             SetCombatMovement(false);
         }
@@ -1225,12 +1160,7 @@ public:
 
     private:
         EventMap _events;
-    };
-
-    CreatureAI* GetAI(Creature* creature) const override
-    {
-        return GetDragonSoulAI<npc_hagara_the_stormbinder_collapsing_icicleAI>(creature);
-    }
+    
 };
 
 
@@ -1278,9 +1208,7 @@ struct spell_hagara_the_stormbinder_icy_tomb_dummy : public SpellScript
 
 struct spell_hagara_the_stormbinder_icy_tomb : public AuraScript
 {
-    PrepareAuraScript(spell_hagara_the_stormbinder_icy_tomb);
-
-    void OnApply(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+    void OnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         if (!GetCaster() || !GetUnitOwner())
             return;
@@ -1299,8 +1227,6 @@ struct spell_hagara_the_stormbinder_icy_tomb : public AuraScript
 
 struct spell_hagara_the_stormbinder_lightning_conduit : public AuraScript
 {
-    PrepareAuraScript(spell_hagara_the_stormbinder_lightning_conduit);
-
     class AnyPlayerOrCrystalCheck
     {
     public:
