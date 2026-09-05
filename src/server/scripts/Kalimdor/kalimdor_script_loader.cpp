@@ -59,6 +59,7 @@ void AddSC_boss_morchok();                   //CoT Dragon Soul
 void AddSC_boss_warlord_zonozz();            //CoT Dragon Soul - Warlord Zon'ozz 55308 (gateado por Morchok DONE)
 void AddSC_boss_yorsahj_the_unsleeping();     //CoT Dragon Soul - Yor'sahj the Unsleeping 55312 (gateado por Zon'ozz DONE)
 void AddSC_boss_hagara();                     //CoT Dragon Soul - Hagara the Stormbinder 55689 (gateado por Yor'sahj DONE)
+void AddSC_boss_ultraxion();                  //CoT Dragon Soul - Ultraxion 55294 (spawn apos Hagara DONE)
 void AddSC_boss_madness_of_deathwing();
 void AddSC_instance_dire_maul();             //Dire Maul
 void AddSC_instance_ragefire_chasm();        //Ragefire Chasm
@@ -204,6 +205,7 @@ void AddKalimdorScripts()
     AddSC_boss_warlord_zonozz();            //CoT Dragon Soul - Warlord Zon'ozz 55308
     AddSC_boss_yorsahj_the_unsleeping();     //CoT Dragon Soul - Yor'sahj 55312
     AddSC_boss_hagara();                     //CoT Dragon Soul - Hagara 55689
+    AddSC_boss_ultraxion();                  //CoT Dragon Soul - Ultraxion 55294
     AddSC_boss_madness_of_deathwing();
     AddSC_instance_dire_maul();             //Dire Maul
     AddSC_instance_ragefire_chasm();        //Ragefire Chasm

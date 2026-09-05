@@ -80,7 +80,8 @@ enum DSCreatures
 
     // Hagara the Stormbinder - 4o boss DS (gateado por Yor'sahj DONE)
     // Port do MoP 5.4.8 (Legends-of-Azeroth boss_hagara.cpp). Entries mantidos retail 4.3.4.
-    NPC_HAGARA_THE_STORMBINDER                  = 55689, // boss
+        NPC_HAGARA_THE_STORMBINDER                  = 55689, // boss
+    NPC_ULTRAXION                               = 55294, // Ultraxion - 5o boss, spawn apos Hagara
     NPC_ICE_WAVE                                = 56104, // Ice Wave - varredura em circulo na plataforma
     NPC_ICE_LANCE                               = 56108, // spear visual do Ice Lance (fase normal)
     NPC_FROZEN_BINDING_CRYSTAL                  = 56136, // Binding Crystal - destrava fase Frozen Tempest

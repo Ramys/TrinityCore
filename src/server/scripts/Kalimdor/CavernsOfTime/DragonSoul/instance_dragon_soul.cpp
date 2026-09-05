@@ -63,6 +63,7 @@ public:
             SetBossNumber(EncounterCount);
             LoadDoorData(doorData);
             LoadObjectData(creatureData, gameobjectData);
+            _ultraxionSpawned = false;
         }
 
         void OnCreatureCreate(Creature* creature) override
@@ -90,6 +91,34 @@ public:
             }
         }
 
+        void SpawnUltraxion()
+        {
+            if (!instance || !instance->GetMap())
+                return;
+
+            // Ultraxion arena on the Wyrmrest summit (map 967).
+            // NOTE: coords [-1564,-2369,250.083] need confirmation against WoW DB / MMaps,
+            // placeholder derived from the intended 4.3.4 design (summit Z ~250).
+            Position ultraxionPos = {-1564.0f, -2369.0f, 250.083f, 3.28f};
+
+            // Summon Ultraxion at the arena
+            if (Creature* ultraxion = instance->GetMap()->SummonCreature(NPC_ULTRAXION, ultraxionPos))
+            {
+                ultraxion->SetReactState(REACT_PASSIVE);
+                ultraxion->AI()->EnterEvadeMode();
+                _ultraxionSpawned = true;
+            }
+        }
+
+        // Hook Hagara's death to open the way to Ultraxion (5th boss).
+        // BossAI::_JustDied() -> SetBossState(DATA_HAGARA_THE_STORMBINDER, DONE) lands here.
+        bool SetBossState(uint32 id, EncounterState state) override
+        {
+            if (id == DATA_HAGARA_THE_STORMBINDER && state == DONE && !_ultraxionSpawned)
+                SpawnUltraxion();
+            return InstanceScript::SetBossState(id, state);
+        }
+
         void OnPlayerEnter(Player* player) override
         {
             if (GetBossState(DATA_MADNESS_OF_DEATHWING) == DONE)
@@ -112,12 +141,16 @@ public:
                 case DATA_HAGARA_THE_STORMBINDER:
                     // Blizzlike sequencial: Hagara (4o boss) so apos Yor'sahj DONE
                     // C++ boss_hagara JustEngagedWith -> EnterEvadeMode(EVADE_REASON_SEQUENCE_BREAK) se Yor'sahj != DONE
+                    // Ultraxion (5o boss) spawn e hook feito em SetBossState() quando Hagara -> DONE
                     return GetBossState(DATA_YORSAHJ_THE_UNSLEEPING) == DONE;
                 default:
                     break;
             }
             return true;
         }
+
+    private:
+        bool _ultraxionSpawned;
     };
 
     InstanceScript* GetInstanceScript(InstanceMap* map) const override
