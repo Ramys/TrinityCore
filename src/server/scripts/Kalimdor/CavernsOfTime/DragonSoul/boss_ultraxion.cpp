@@ -1,3 +1,5 @@
+#include "AuraScript.h"
+#include "SelectTarget.h"
 /*
  * TrinityCore 4.3.4 - Dragon Soul: Ultraxion 55294
  * Port do Pandaria 5.4.8 (ultraxion_mop.cpp) -> Cata 4.3.4
@@ -203,7 +205,7 @@ struct boss_ultraxionAI : public BossAI
         me->GetMap()->SetWorldStateValue(WORLDSTATE_MINUTES_TO_MIDNIGHT, 0, false);
     }
 
-    void EnterEvadeMode() override
+    void EnterEvadeMode(EvadeReason reason = EXECUTE_DIRECTLY) override
     {
         BossAI::EnterEvadeMode();
         if (InstanceScript* script = me->GetInstanceScript())
@@ -827,7 +829,7 @@ struct spell_ultraxion_achievement_aura : public AuraScript
 
     void Register() override
     {
-        OnEffectApply += AuraEffectApplyFn(spell_ultraxion_achievement_aura::HandleAuraEffectApply, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAPPLY);
+        OnEffectApply += AuraEffectApplyFn(&spell_ultraxion_achievement_aura::HandleAuraEffectApply, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAPPLY);
     }
 };
 
