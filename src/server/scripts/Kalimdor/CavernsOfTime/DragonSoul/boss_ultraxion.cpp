@@ -38,22 +38,30 @@ namespace DragonSoul::Ultraxion
 
 enum ScriptedTexts
 {
-    SAY_AGGRO       = 0,
-    SAY_BERSERK     = 1,
-    SAY_DEATH       = 2,
-    SAY_INTRO_1     = 3,
-    SAY_INTRO_2     = 4,
-    SAY_KILL        = 5,
-    SAY_TWILIGHT    = 6,
-    SAY_UNSTABLE    = 7,
-    SAY_ANNOUNCE    = 8,
-    ANN_HOT         = 9,
-    ANN_UNSTABLE    = 10,
+    SAY_AGGRO       = 0, // "Now is the Hour of Twilight!" 26314 VO_DS_ULTRAXION_AGGRO_01
+    SAY_BERSERK     = 1, // "I WILL DRAG YOU WITH ME INTO FLAME AND DARKNESS!" 26315 VO_DS_ULTRAXION_BERSERK_01 (Twilight Eruption)
+    SAY_DEATH       = 2, // "But...but...I am...Ul...trax...ionnnnnn..." 26316 VO_DS_ULTRAXION_DEATH_01
+    SAY_INTRO_1     = 3, // "I am the beginning of the end..." 26317 VO_DS_ULTRAXION_INTRO_01
+    SAY_INTRO_2     = 4, // "For this moment ALONE was I made..." 26318 VO_DS_ULTRAXION_INTRO_02
+    SAY_KILL        = 5, // 26319/26320/26321 VO_DS_ULTRAXION_SLAY_01..03
+    SAY_TWILIGHT    = 6, // "The final shred of light fades..." 26323 VO_DS_ULTRAXION_SPELL_01 (Hour of Twilight)
+    SAY_UNSTABLE    = 7, // "Through the pain and fire my hatred burns!" 26324 VO_DS_ULTRAXION_SPELL_02 (More Unstable)
 
-    ANN_ALEXTRASZA_GIFT = 6,
-    ANN_YSERA_ESSENCE   = 5,
-    ANN_KALECGOS_SOURCE = 5,
-    ANN_NOZDORNU_TIMELOOP = 2,
+    // Aspectos (creature_text proprio por entry): ANN_THRALL_LAST_DEFENDER=8 (56103),
+    // ANN_ALEXTRASZA_GIFT=6 (56099), ANN_YSERA_ESSENCE=5 (56100),
+    // ANN_KALECGOS_SOURCE=5 (56101), ANN_NOZDORNU_TIMELOOP=2 (56102).
+    ANN_THRALL_LAST_DEFENDER = 8,
+    ANN_ALEXTRASZA_GIFT      = 6,
+    ANN_YSERA_ESSENCE        = 5,
+    ANN_KALECGOS_SOURCE      = 5,
+    ANN_NOZDORNU_TIMELOOP    = 2,
+};
+
+enum WorldStates
+{
+    // DBC Achievement_Criteria 18391 (Ach 6084 "Minutes to Midnight") RequiredWorldStateID 6131 == 0 for success.
+    // 0 = ninguem atingido 2x pela Hour of Twilight, 1 = falha (aura 109188 reapply stack>1).
+    WORLDSTATE_MINUTES_TO_MIDNIGHT = 6131,
 };
 enum Spells
 {
@@ -192,6 +200,7 @@ struct boss_ultraxionAI : public BossAI
         unstableCount = 0;
 
         me->SetHomePosition(ultraxionPos[1]);
+        me->GetMap()->SetWorldStateValue(WORLDSTATE_MINUTES_TO_MIDNIGHT, 0, false);
     }
 
     void EnterEvadeMode() override
@@ -234,6 +243,8 @@ struct boss_ultraxionAI : public BossAI
         DeleteGameObjects(GO_GIFT_OF_LIFE);
         DeleteGameObjects(GO_ESSENCE_OF_DREAMS);
         DeleteGameObjects(GO_SOURCE_OF_MAGIC);
+
+        me->GetMap()->SetWorldStateValue(WORLDSTATE_MINUTES_TO_MIDNIGHT, 0, false);
 
         unstableCount = 0;
 
@@ -303,7 +314,6 @@ void UpdateAI(uint32 diff) override
                     break;
                 case EVENT_TALK_1:
                     DoCastAOE(SPELL_TWILIGHT_SHIFT_AOE, true);
-                    Talk(SAY_ANNOUNCE);
                     events.ScheduleEvent(EVENT_TALK_2, 4s);
                     break;
                 case EVENT_TALK_2:
@@ -322,7 +332,7 @@ void UpdateAI(uint32 diff) override
                 case EVENT_THRALL:
                     if (Creature* pThrall = me->FindNearestCreature(NPC_THRALL_MADNESS_OF_DEATHWING, 300.0f))
                     {
-                        pThrall->AI()->Talk(SAY_ANNOUNCE); // Thrall convoca Last Defender
+                        pThrall->AI()->Talk(ANN_THRALL_LAST_DEFENDER);
                         pThrall->CastSpell(pThrall, SPELL_LAST_DEFENDER_OF_AZEROTH, true);
                     }
                     break;
@@ -390,8 +400,6 @@ case EVENT_KALECGOS:
                         default:
                             break;
                     }
-                    if (unstableCount > 1)
-                        Talk(ANN_UNSTABLE);
                     if (unstableCount >= 7)
                     {
                         Talk(SAY_BERSERK);
@@ -402,7 +410,6 @@ case EVENT_KALECGOS:
                     break;
                 case EVENT_HOUR_OF_TWILIGHT:
                     Talk(SAY_TWILIGHT);
-                    Talk(ANN_HOT);
                     DoCastSelf(SPELL_HOUR_OF_TWILIGHT);
                     events.ScheduleEvent(EVENT_HOUR_OF_TWILIGHT, 45s);
                     break;
@@ -430,6 +437,7 @@ private:
 
     void RemoveEncounterAuras()
     {
+        instance->DoRemoveAurasDueToSpellOnPlayers(SPELL_ULTRAXION_ACHIEVEMENT_AURA);
         instance->DoRemoveAurasDueToSpellOnPlayers(SPELL_LOOMING_DARKNESS_DUMMY);
         instance->DoRemoveAurasDueToSpellOnPlayers(SPELL_LOOMING_DARKNESS_DMG);
         instance->DoRemoveAurasDueToSpellOnPlayers(SPELL_TWILIGHT_SHIFT);
@@ -808,6 +816,21 @@ struct spell_ultraxion_time_loop : public AuraScript
     }
 };
 
+struct spell_ultraxion_achievement_aura : public AuraScript
+{
+    // 109188 reapply stack>1 = raider atingido pela Hour of Twilight 2x -> worldstate 6131 = 1 (falha)
+    void HandleAuraEffectApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        if (GetStackAmount() > 1 && GetOwner() && GetOwner()->ToUnit())
+            GetOwner()->ToUnit()->GetMap()->SetWorldStateValue(WORLDSTATE_MINUTES_TO_MIDNIGHT, 1, false);
+    }
+
+    void Register() override
+    {
+        OnEffectApply += AuraEffectApplyFn(spell_ultraxion_achievement_aura::HandleAuraEffectApply, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAPPLY);
+    }
+};
+
 } // namespace DragonSoul::Ultraxion
 
 using namespace DragonSoul::Ultraxion;
@@ -823,4 +846,5 @@ void AddSC_boss_ultraxion()
     RegisterSpellScript(spell_ultraxion_last_defender_of_azeroth_dummy);
     RegisterSpellScript(spell_ultraxion_heroic_will);
     RegisterSpellScript(spell_ultraxion_time_loop);
+    RegisterSpellScript(spell_ultraxion_achievement_aura);
 }
