@@ -273,8 +273,9 @@ struct boss_morchok : public BossAI
         if (!me->IsAlive())
             return;
 
-        // Normal: 1 HP bug fix - mata com killer correto (loot), evita SetHealth(0)+JustDied(nullptr) que quebra lootRecipient
-        if (!_isHeroic && me->GetHealth() <= damage)
+        // Lethal: mata com Unit::Kill explicito pra preservar attacker->lootRecipient.
+        // Funciona pra Normal e Heroico: JustDied mata Kohcrom em heroico.
+        if (me->GetHealth() <= damage)
         {
             if (attacker)
                 Unit::Kill(attacker, me, false);
@@ -295,20 +296,12 @@ struct boss_morchok : public BossAI
         if (!me->HasAura(SPELL_FURIOUS) && me->HealthBelowPctDamaged(20, damage))
             DoCastSelf(SPELL_FURIOUS);
 
-        // Shared Health Pool em Heroico - espelha dano; em lethal deixa core matar (preserva killer->loot)
+        // Shared Health Pool em Heroico - espelha dano nao-letal pro twin
         if (_kohcrom && _kohcrom->IsAlive())
         {
             uint32 cur = me->GetHealth();
             if (damage < cur)
-            {
-                uint32 newHp = cur - damage;
-                _kohcrom->SetHealth(newHp);
-            }
-            else
-            {
-                _kohcrom->SetHealth(1);
-                (void)attacker;
-            }
+                _kohcrom->SetHealth(cur - damage);
         }
     }
 
@@ -516,39 +509,44 @@ struct npc_morchok_kohcrom : public BossAI
         if (!me->IsAlive())
             return;
 
-        if (!_isHeroic && me->GetHealth() <= damage)
+        if (!_twin && instance)
+            _twin = instance->GetCreature(DATA_MORCHOK);
+
+        // Lethal: mata Morchok (fonte do loot) com attacker correto via Unit::Kill.
+        // Morchok::JustDied propaga kill pra Kohcrom.
+        if (me->GetHealth() <= damage)
         {
-            if (attacker)
-                Unit::Kill(attacker, me, false);
-            else if (Unit* v = me->GetVictim())
-                Unit::Kill(v, me, false);
-            else if (_twin)
-                Unit::Kill(_twin, me, false);
+            if (_twin && _twin->IsAlive())
+            {
+                if (attacker)
+                    Unit::Kill(attacker, _twin, false);
+                else if (Unit* v = me->GetVictim())
+                    Unit::Kill(v, _twin, false);
+                else
+                    Unit::Kill(me, _twin, false);
+            }
             else
-                Unit::Kill(me, me, false);
+            {
+                if (attacker)
+                    Unit::Kill(attacker, me, false);
+                else if (Unit* v = me->GetVictim())
+                    Unit::Kill(v, me, false);
+                else
+                    Unit::Kill(me, me, false);
+            }
             damage = 0;
             return;
         }
 
-        if (!_twin && instance)
-            _twin = instance->GetCreature(DATA_MORCHOK);
-
         if (!me->HasAura(SPELL_FURIOUS) && me->HealthBelowPctDamaged(20, damage))
             DoCastSelf(SPELL_FURIOUS);
 
+        // Shared Health Pool - espelha dano nao-letal pro twin
         if (_twin && _twin->IsAlive())
         {
             uint32 cur = me->GetHealth();
             if (damage < cur)
-            {
-                uint32 newHp = cur - damage;
-                _twin->SetHealth(newHp);
-            }
-            else
-            {
-                _twin->SetHealth(1);
-                (void)attacker;
-            }
+                _twin->SetHealth(cur - damage);
         }
     }
 
