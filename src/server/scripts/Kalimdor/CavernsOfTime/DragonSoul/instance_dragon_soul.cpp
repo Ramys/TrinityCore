@@ -18,6 +18,7 @@
 #include "InstanceScript.h"
 #include "Player.h"
 #include "ScriptMgr.h"
+#include "TemporarySummon.h"
 #include "dragon_soul.h"
 
 namespace DragonSoul
@@ -93,7 +94,7 @@ public:
 
         void SpawnUltraxion()
         {
-            if (!instance || !instance->GetMap())
+            if (!instance)
                 return;
 
             // Ultraxion arena on the Wyrmrest summit (map 967).
@@ -101,8 +102,8 @@ public:
             // placeholder derived from the intended 4.3.4 design (summit Z ~250).
             Position ultraxionPos = {-1564.0f, -2369.0f, 250.083f, 3.28f};
 
-            // Summon Ultraxion at the arena
-            if (Creature* ultraxion = instance->GetMap()->SummonCreature(NPC_ULTRAXION, ultraxionPos))
+            // Summon Ultraxion at the arena (instance IS the Map*)
+            if (Creature* ultraxion = instance->SummonCreature(NPC_ULTRAXION, ultraxionPos))
             {
                 ultraxion->SetReactState(REACT_PASSIVE);
                 ultraxion->AI()->EnterEvadeMode();
