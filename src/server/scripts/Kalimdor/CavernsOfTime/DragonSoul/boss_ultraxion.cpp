@@ -188,7 +188,7 @@ struct boss_ultraxionAI : public BossAI
         me->GetMap()->SetWorldStateValue(WORLDSTATE_MINUTES_TO_MIDNIGHT, 0, false);
     }
 
-    void EnterEvadeMode(EvadeReason reason = EXECUTE_DIRECTLY) override
+    void EnterEvadeMode(EvadeReason reason = EVADE_REASON_OTHER) override
     {
         BossAI::EnterEvadeMode();
         if (InstanceScript* script = me->GetInstanceScript())
@@ -616,7 +616,7 @@ struct spell_ultraxion_fading_light : public SpellScript
         targets.remove_if(DPSCheck());
 
         if (Creature* pUltraxion = GetCaster()->ToCreature())
-            if (Unit* target = pUltraxion->AI()->SelectTarget(SELECT_TARGET_TOPAGGRO, 0, 0.0f, true))
+            if (Unit* target = pUltraxion->AI()->SelectTarget(SELECT_TARGET_MAXTHREAT, 0, 0.0f, true))
                 targets.remove(target);
 
         uint32 minPlayers = 1;
@@ -812,7 +812,7 @@ struct spell_ultraxion_achievement_aura : public AuraScript
 
     void Register() override
     {
-        OnEffectApply += AuraEffectApplyFn(&spell_ultraxion_achievement_aura::HandleAuraEffectApply, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAPPLY);
+        OnEffectApply.Register(&spell_ultraxion_achievement_aura::HandleAuraEffectApply, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
     }
 };
 
@@ -823,7 +823,7 @@ using namespace DragonSoul::Ultraxion;
 void AddSC_boss_ultraxion()
 {
     using namespace DragonSoul;
-    RegisterDragonSoulCreatureAI(boss_ultraxion);
+    RegisterDragonSoulCreatureAI(boss_ultraxionAI);
     RegisterSpellScript(spell_ultraxion_twilight_instability);
     RegisterSpellScript(spell_ultraxion_hour_of_twilight_dmg);
     RegisterSpellAndAuraScriptPair(spell_ultraxion_fading_light, spell_ultraxion_fading_light_aura);
