@@ -1,20 +1,3 @@
-#include "AuraScript.h"
-#include "SelectTarget.h"
-/*
- * TrinityCore 4.3.4 - Dragon Soul: Ultraxion 55294
- * Port do Pandaria 5.4.8 (ultraxion_mop.cpp) -> Cata 4.3.4
- * Ref: Spell.dbc TCP 4.3.4 (spell IDs validados contra a DBC), warcraft.wiki Ultraxion
- * Padrao: struct : public BossAI + RegisterDragonSoulCreatureAI, Spell/AuraScript sem Prepare*.
- *
- * Mecanica (Blizzlike DS):
- *  - Spawn apos Hagara DONE (hook no instance_dragon_soul SetBossState).
- *  - Intro: spawn invisivel -> move pro piao -> Twilight Shift (puxa raid p/ Twilight Realm).
- *  - Unstable Monstrosity (soft enrage por stacks), Hour of Twilight (soak no Twilight Realm),
- *    Fading Light (expira -> kill Twilight Realm / puxa Normal Realm), Heroic Will (remove do Twilight Realm),
- *    Twilight Instability, Twilight Burst, bufes dos Aspectos (Thrall/Last Defender, Alextrasza/Gift,
- *    Ysera/Essence, Kalecgos/Source, Nozdormu/Timeloop).
- */
-
 #include "dragon_soul.h"
 #include "ScriptedCreature.h"
 #include "ScriptMgr.h"

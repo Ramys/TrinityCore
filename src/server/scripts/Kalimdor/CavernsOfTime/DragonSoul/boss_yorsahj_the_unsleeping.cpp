@@ -484,11 +484,11 @@ struct npc_yorsahj_forgotten_one : public ScriptedAI
     void JustEngagedWith(Unit*) override { _timer = 6000; DoFixate(); }
     void DoFixate()
     {
-        if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, 100.0f, true))
+        if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
         {
             me->GetThreatManager().ResetAllThreat();
-            me->AddThreat(target, 500000.0f);
-            me->TauntApply(target);
+            me->GetThreatManager().AddThreat(target, 500000.0f, nullptr, true, true);
+            me->GetThreatManager().FixateTarget(target);
             DoCast(target, SPELL_FIXATE, true);
         }
     }
