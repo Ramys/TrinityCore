@@ -58,8 +58,17 @@ Todo agente deve seguir este fluxo de trabalho rigoroso para evitar erros e inco
     - Observe a estrutura e lógica nos diretórios `src/` para entender como as funcionalidades são implementadas.
     - **Não mude APIs ou funções principais** sem discutir em uma issue primeiro. Prefira estender ou corrigir comportamentos existentes.
     - Garanta que a correção não quebre a compilação. O projeto usa **CI (GitHub Actions)** ; uma correção válida não deve gerar erros de build.
+    - **Anti-patterns MoP — APIs inexistentes em 4.3.4** (ver `MEMORY_ROOT §3`, `CRULES §15`):
+        - `#include "AuraScript.h"` / `#include "SelectTarget.h"` → headers não existem (`CRULES §15.15`)
+        - `AuraEffectApplyFn(...)` → `OnEffectApply.Register(...)` (`CRULES §15.13`)
+        - `SELECT_TARGET_TOPAGGRO` → `SELECT_TARGET_MAXTHREAT` (`CRULES §15.14`)
+        - `creature->TauntApply(t)` → `creature->GetThreatManager().FixateTarget(t)` (`CRULES §15.11`)
+        - `EXECUTE_DIRECTLY` → `EVADE_REASON_OTHER` (`CRULES §15.12`)
+        - `creature->AddThreat(t, amt)` → `creature->GetThreatManager().AddThreat(t, amt, ...)` (`CRULES §15.10`)
 
 3.  **Para Correções em SmartAI:**
+
+
     - Baseie a lógica do evento em comportamentos conhecidos do jogo ou em dados existentes.
     - Não invente sequências de eventos. Use o sistema SmartAI de acordo com a documentação oficial da TrinityCore.
     - Verifique se já existe um script similar para outro NPC ou quest que possa servir de exemplo.
@@ -117,7 +126,7 @@ Para evitar "invenções" e manter a integridade do projeto, os agentes devem **
 | [Issue Tracker](https://github.com/Ramys/TrinityCore/issues) | Reportar e verificar problemas |
 | [Pull Requests](https://github.com/Ramys/TrinityCore/pulls) | Submeter e revisar correções |
 | [Wiki do TrinityCore](https://www.trinitycore.org/) | Documentação geral do projeto |
-| [MEMORY_ROOT_CATACLYSM_434.md](MEMORY_ROOT_CATACLYSM_434.md) | Referencia de APIs/gotchas 4.3.4 (EventMap, SpellScript, InstanceScript, SelectTarget 6-param, MINDISTANCE, DoEffectCalcDamageAndHealing, near/far macros, Position::m_orientation private, ThreatManager::AddThreat) |
+| [MEMORY_ROOT_CATACLYSM_434.md](MEMORY_ROOT_CATACLYSM_434.md) | Referencia de APIs/gotchas 4.3.4 (EventMap, SpellScript, InstanceScript, SelectTarget 6-param, MINDISTANCE, DoEffectCalcDamageAndHealing, near/far macros, Position::m_orientation private, ThreatManager::AddThreat, FixateTarget, EVADE_REASON_OTHER, OnEffectApply.Register, SELECT_TARGET_MAXTHREAT, headers MoP inexistentes) |
 
 ---
 

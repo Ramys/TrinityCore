@@ -1756,6 +1756,52 @@ AddThreat(victim, amount); // ScriptedCreature.cpp:205 -> who->GetThreatManager(
 ```
 - `ThreatReference::AddThreat(float)` e `ThreatManager::AddThreat` são internos; não chamar `ref->AddThreat` fora de `ThreatManager.cpp`.
 
+### 15.11 ThreatManager::FixateTarget (sem Creature::TauntApply)
+
+- `Creature` NÃO possui `TauntApply` (API MoP). Usar `GetThreatManager().FixateTarget(Unit*)`.
+```cpp
+// ERRADO (Cata não compila — TauntApply não existe):
+me->TauntApply(target);
+// CORRETO (4.3.4):
+me->GetThreatManager().FixateTarget(target);
+```
+
+### 15.12 EvadeReason::EnterEvadeMode — EVADE_REASON_OTHER (sem EXECUTE_DIRECTLY)
+
+- `EXECUTE_DIRECTLY` é API MoP (`EvadeReason` enum). Em 4.3.4 usar `EVADE_REASON_OTHER`.
+```cpp
+// ERRADO (MoP):
+void EnterEvadeMode(EvadeReason reason = EXECUTE_DIRECTLY) override;
+// CORRETO (4.3.4):
+void EnterEvadeMode(EvadeReason reason = EVADE_REASON_OTHER) override;
+```
+
+### 15.13 AuraScript hooks — OnEffectApply.Register (sem AuraEffectApplyFn)
+
+- `AuraEffectApplyFn` é typedef MoP. Em 4.3.4 os hooks são `AuraEffectHook` com `.Register(...)`.
+```cpp
+// ERRADO (MoP — compila em >5.x, não em 4.3.4):
+OnEffectApply += AuraEffectApplyFn(&cls::fnName, EFFECT_0, SPELL_AURA_MOD_..., AURA_EFFECT_HANDLE_REAL);
+// CORRETO (4.3.4):
+OnEffectApply.Register(&cls::fnName, EFFECT_0, SPELL_AURA_MOD_...);
+```
+
+### 15.14 SelectTarget — SELECT_TARGET_MAXTHREAT (sem SELECT_TARGET_TOPAGGRO)
+
+- `SELECT_TARGET_TOPAGGRO` é enum MoP. Em 4.3.4 o enum `SelectTargetMethod` (`UnitAI.h`) tem `SELECT_TARGET_MAXTHREAT` (equivalente).
+```cpp
+// ERRADO (MoP):
+SelectTarget(SELECT_TARGET_TOPAGGRO, 0, 100.0f, true)
+// CORRETO (4.3.4):
+SelectTarget(SELECT_TARGET_MAXTHREAT, 0, 100.0f, true)
+```
+
+### 15.15 Headers MoP inexistentes — AuraScript.h / SelectTarget.h
+
+- `AuraScript.h` e `SelectTarget.h` NÃO existem no Cata 4.3.4. Incluir quebra build.
+- `AuraScript`/`SpellScript` estão em `SpellScript.h`; `SelectTarget`/`SelectTargetMethod` estão em `UnitAI.h`.
+- Correção: remover includes, incluir `SpellScript.h` (para auras) e `UnitAI.h` (para SelectTarget).
+
 ---
 
 ## REGRA SUPREMA: FIEL

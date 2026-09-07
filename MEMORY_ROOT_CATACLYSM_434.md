@@ -247,6 +247,43 @@ Position p; p.Relocate(x, y, z, o);
 creature->GetThreatManager().AddThreat(target, 10.0f, nullptr, true, true);
 ```
 
+### 3.16 ThreatManager::FixateTarget (sem Creature::TauntApply)
+`Creature` NÃO tem `TauntApply`. Usar `FixateTarget` via `GetThreatManager()`.
+```cpp
+// ERRADO: creature->TauntApply(target);
+// CORRETO:
+creature->GetThreatManager().FixateTarget(target);
+```
+
+### 3.17 EvadeReason — EVADE_REASON_OTHER (sem EXECUTE_DIRECTLY)
+`EXECUTE_DIRECTLY` é MoP. Em 4.3.4 usar `EVADE_REASON_OTHER` (`CreatureAI.h:85`).
+```cpp
+// ERRADO: void EnterEvadeMode(EvadeReason reason = EXECUTE_DIRECTLY) override
+// CORRETO:
+void EnterEvadeMode(EvadeReason reason = EVADE_REASON_OTHER) override
+```
+
+### 3.18 AuraEffectHook registration — OnEffectApply.Register (sem AuraEffectApplyFn)
+`AuraEffectApplyFn` é MoP. Em 4.3.4 usar `.Register()` no hook handler (`SpellScript.h:949`).
+```cpp
+// ERRADO: OnEffectApply += AuraEffectApplyFn(&class::func, EFFECT_0, SPELL_AURA_X, AURA_EFFECT_HANDLE_REAPPLY);
+// CORRETO:
+OnEffectApply.Register(&class::func, EFFECT_0, SPELL_AURA_X);
+```
+
+### 3.19 SelectTarget enum — SELECT_TARGET_MAXTHREAT (sem SELECT_TARGET_TOPAGGRO)
+`SELECT_TARGET_TOPAGGRO` é MoP. Em 4.3.4 os targets válidos são `SELECT_TARGET_RANDOM`, `SELECT_TARGET_MAXTHREAT`, `SELECT_TARGET_MINTHREAT`, `SELECT_TARGET_MAXDISTANCE`, `SELECT_TARGET_MINDISTANCE` (`UnitAI.h:50`).
+```cpp
+// ERRADO: pUltraxion->AI()->SelectTarget(SELECT_TARGET_TOPAGGRO, 0, 0.0f, true)
+// CORRETO:
+pUltraxion->AI()->SelectTarget(SELECT_TARGET_MAXTHREAT, 0, 0.0f, true)
+```
+
+### 3.20 Headers não-existentes em 4.3.4
+Estes headers MoP NÃO existem no codebase 4.3.4 — não devem ser incluídos:
+- `AuraScript.h` — conteúdo coberto por `SpellScript.h` (incluir `SpellScript.h` basta)
+- `SelectTarget.h` — `SelectTarget` é definido em `UnitAI.h` (incluir `UnitAI.h` ou `ScriptedCreature.h` basta)
+
 ---
 
 ## 4. Conteudo Nao-Cata
