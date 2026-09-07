@@ -1779,12 +1779,16 @@ void EnterEvadeMode(EvadeReason reason = EVADE_REASON_OTHER) override;
 ### 15.13 AuraScript hooks — OnEffectApply.Register (sem AuraEffectApplyFn)
 
 - `AuraEffectApplyFn` é typedef MoP. Em 4.3.4 os hooks são `AuraEffectHook` com `.Register(...)`.
+- `OnEffectApply` é `_HookList<AuraEffectHandleModeHookHandler<void, AuraEffect const*, AuraEffectHandleModes>, SpellEffIndex, uint16, AuraEffectHandleModes>` — Register aceita **4 args**: `(handler, SpellEffIndex, uint16 auraName, AuraEffectHandleModes)`. O 4º arg (mode) é **obrigatório**.
 ```cpp
 // ERRADO (MoP — compila em >5.x, não em 4.3.4):
 OnEffectApply += AuraEffectApplyFn(&cls::fnName, EFFECT_0, SPELL_AURA_MOD_..., AURA_EFFECT_HANDLE_REAL);
-// CORRETO (4.3.4):
+// ERRADO (falta 4º arg — "nenhuma função sobrecarregada correspondente"):
 OnEffectApply.Register(&cls::fnName, EFFECT_0, SPELL_AURA_MOD_...);
+// CORRETO (4.3.4 — 4 args):
+OnEffectApply.Register(&cls::fnName, EFFECT_0, SPELL_AURA_MOD_..., AURA_EFFECT_HANDLE_REAL);
 ```
+- Aplica-se igualmente a `AfterEffectApply`, `OnEffectRemove`, `AfterEffectRemove` (mesmo tipo `AuraEffectApplyHookHandler`).
 
 ### 15.14 SelectTarget — SELECT_TARGET_MAXTHREAT (sem SELECT_TARGET_TOPAGGRO)
 

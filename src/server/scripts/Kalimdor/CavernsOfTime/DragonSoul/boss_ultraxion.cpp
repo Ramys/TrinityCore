@@ -188,7 +188,7 @@ struct boss_ultraxionAI : public BossAI
         me->GetMap()->SetWorldStateValue(WORLDSTATE_MINUTES_TO_MIDNIGHT, 0, false);
     }
 
-    void EnterEvadeMode(EvadeReason reason = EVADE_REASON_OTHER) override
+    void EnterEvadeMode(EvadeReason /*reason*/) override
     {
         BossAI::EnterEvadeMode();
         if (InstanceScript* script = me->GetInstanceScript())
@@ -812,7 +812,7 @@ struct spell_ultraxion_achievement_aura : public AuraScript
 
     void Register() override
     {
-        OnEffectApply.Register(&spell_ultraxion_achievement_aura::HandleAuraEffectApply, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+        OnEffectApply.Register(&spell_ultraxion_achievement_aura::HandleAuraEffectApply, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAL);
     }
 };
 

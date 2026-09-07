@@ -264,11 +264,13 @@ void EnterEvadeMode(EvadeReason reason = EVADE_REASON_OTHER) override
 ```
 
 ### 3.18 AuraEffectHook registration — OnEffectApply.Register (sem AuraEffectApplyFn)
-`AuraEffectApplyFn` é MoP. Em 4.3.4 usar `.Register()` no hook handler (`SpellScript.h:949`).
+`AuraEffectApplyFn` é MoP. Em 4.3.4 usar `.Register()` no hook handler (`SpellScript.h:949`). O 4º arg (`AuraEffectHandleModes`) é obrigatório.
 ```cpp
 // ERRADO: OnEffectApply += AuraEffectApplyFn(&class::func, EFFECT_0, SPELL_AURA_X, AURA_EFFECT_HANDLE_REAPPLY);
-// CORRETO:
+// ERRADO (falta 4º arg):
 OnEffectApply.Register(&class::func, EFFECT_0, SPELL_AURA_X);
+// CORRETO (4 args):
+OnEffectApply.Register(&class::func, EFFECT_0, SPELL_AURA_X, AURA_EFFECT_HANDLE_REAL);
 ```
 
 ### 3.19 SelectTarget enum — SELECT_TARGET_MAXTHREAT (sem SELECT_TARGET_TOPAGGRO)
