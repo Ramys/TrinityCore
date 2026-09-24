@@ -279,6 +279,13 @@ target_include_directories(storm
 
 target_compile_definitions(storm PUBLIC __STORMLIB_NO_STATIC_LINK__)
 
+if (MSVC)
+    # Little fix for MSVC / Windows platforms
+    target_compile_definitions(storm
+            PRIVATE
+            -D_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=0)
+endif()
+
 target_link_libraries(storm
   PRIVATE
     trinity-dependency-interface
